@@ -2,7 +2,7 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
-  <title>掷骰子啦</title>
+  <title>来掷骰子啦</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <style>
     :root{--primary:#6366f1;--bg:#f9fafb;--border-color:#e5e7eb;}
@@ -442,10 +442,10 @@
   </style>
 </head>
 <body>
-  <h1>🎲 骰子 & 问题挑战</h1>
+  <h1>来掷骰子啦</h1>
 
   <div class="section">
-    <p style="font-weight: 600; margin-bottom: 1rem;">选择掷骰子的玩家：</p>
+    <p style="font-weight: 600; margin-bottom: 1rem;">选择掷骰子的人：</p>
     <div id="playerSelectionContainer">
       <div id="playerSelection">
         </div>
@@ -524,8 +524,7 @@
         </div>
 
         <button type="submit" style="margin-top:1rem;">保存记录</button>
-        <button type="button" id="closeModal" style="margin-top:1rem;background:#e5e7eb;color:#000;">取消</button>
-      </form>
+        </form>
     </div>
   </div>
 
@@ -835,7 +834,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const noAnswerOptions = document.getElementById('noAnswerOptions');
     const penaltyOptionsContainer = document.getElementById('penaltyOptionsContainer');
     let selectedPenalty = '';
-    const closeModalBtn=document.getElementById('closeModal');
+    // const closeModalBtn=document.getElementById('closeModal'); // Removed as per request
 
     const designateModal = document.getElementById('designateModal');
     const designateMessage = document.getElementById('designateMessage');
@@ -1079,14 +1078,12 @@ document.addEventListener('DOMContentLoaded', function() {
       // If a player is already selected, try to pick a different player
       if (selectedRoller && currentPlayers.length > 1) {
         availablePlayersForRandom = currentPlayers.filter(p => p.name !== selectedRoller.name);
-        // If filtering results in an empty list (e.g., only one player total and they are selected),
-        // then just re-select that one player or do nothing. For simplicity, we'll allow re-selection if only one other option.
         if (availablePlayersForRandom.length === 0) {
-            availablePlayersForRandom = [...currentPlayers]; // Fallback to all players
+            availablePlayersForRandom = [...currentPlayers]; 
         }
       }
       
-      if (availablePlayersForRandom.length === 0) { // Should only happen if currentPlayers itself is empty
+      if (availablePlayersForRandom.length === 0) { 
           alert('没有可供随机选择的玩家！');
           return;
       }
@@ -1094,18 +1091,17 @@ document.addEventListener('DOMContentLoaded', function() {
       const randomIndex = Math.floor(Math.random() * availablePlayersForRandom.length);
       const randomlySelectedPlayer = availablePlayersForRandom[randomIndex];
 
-      selectPlayer(randomlySelectedPlayer.name); // Select the player
+      selectPlayer(randomlySelectedPlayer.name); 
 
-      // Scroll the selected player into view
       const newlySelectedCard = playerSelection.querySelector(`.player-card.selected[data-name="${randomlySelectedPlayer.name}"]`);
       if (newlySelectedCard) {
             gsap.to(playerSelection, {
                 scrollLeft: newlySelectedCard.offsetLeft - (playerSelection.clientWidth / 2) + (newlySelectedCard.offsetWidth / 2),
-                duration: 0.5, // Smooth scroll
+                duration: 0.5, 
                 ease: "power2.out"
             });
       }
-      rollBtn.disabled = false; // Ensure roll button is enabled
+      rollBtn.disabled = false; 
     });
 
 
@@ -1277,9 +1273,13 @@ document.addEventListener('DOMContentLoaded', function() {
             questionScrollState = 3;
         }
         
+        // Faster scrolling: reduced duration and interval
+        const scrollAnimDuration = 0.15; // Faster animation for each item
+        const scrollIntervalTime = 150;   // Faster interval between items
+
         scrollingInterval = setInterval(() => {
             gsap.to(activeQuestionElement, {
-                duration: 0.2, 
+                duration: scrollAnimDuration, 
                 opacity: 0,
                 y: -scrollingQuestionWrapper.offsetHeight,
                 ease: "power1.out",
@@ -1288,20 +1288,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     inactiveQuestionElement.textContent = currentQuestionList[currentQuestionIndex].text;
                     gsap.set(inactiveQuestionElement, {y: scrollingQuestionWrapper.offsetHeight, opacity: 0});
 
-
                     let temp = activeQuestionElement;
                     activeQuestionElement = inactiveQuestionElement;
                     inactiveQuestionElement = temp;
 
                     gsap.to(activeQuestionElement, {
-                        duration: 0.2, 
+                        duration: scrollAnimDuration, 
                         opacity: 1,
                         y: 0,
                         ease: "power1.in"
                     });
                 }
             });
-        }, 200); 
+        }, scrollIntervalTime); 
       }
     });
 
@@ -1321,7 +1320,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let history = personQuestionHistory.get(personName) || [];
         if (!history.includes(questionText)) {
             history.push(questionText);
-            if (history.length > 20) { // Keep a longer history to avoid quick repeats
+            if (history.length > 20) { 
                 history.shift();
             }
             personQuestionHistory.set(personName, history);
@@ -1400,11 +1399,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    closeModalBtn.addEventListener('click',()=>{
-      questionModal.style.display='none';
-      answerForm.reset();
-    });
-
     answerForm.addEventListener('submit',e=>{
       e.preventDefault();
       const who = selectedRoller.name;
@@ -1428,7 +1422,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ans = '跳过作答';
             answerStatus = 'skipped';
             if (selectedRoller && playerRewards.has(selectedRoller.name) && playerRewards.get(selectedRoller.name).skipAnswer) {
-                playerRewards.get(selectedRoller.name).skipAnswer = false; // Consume reward
+                playerRewards.get(selectedRoller.name).skipAnswer = false; 
                 console.log(`${selectedRoller.name} 的跳过奖励已消耗。`);
             }
         } else if (selectedPenalty === 'penalty_drink') {
@@ -1447,9 +1441,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const now = new Date();
       const formattedDate = `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const formattedTime = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }); // Use Chinese locale for time
+      const formattedTime = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }); 
 
-      // Perform lottery only if answered or skipped with reward
       if (willAnswerValue === 'Yes' || (willAnswerValue === 'No' && selectedPenalty === 'skip')) {
           lotteryResultText = performLottery(who);
       } else {
@@ -1472,12 +1465,11 @@ document.addEventListener('DOMContentLoaded', function() {
       questionModal.style.display='none';
       answerForm.reset();
 
-      // Check for "designateAnswerer" reward
       if (playerRewards.has(who) && playerRewards.get(who).designateAnswerer) {
         pendingDesignationForNextRoll.active = true;
         pendingDesignationForNextRoll.designatedBy = who;
-        pendingDesignationForNextRoll.originalRoller = who; // Store who earned the designation
-        playerRewards.get(who).designateAnswerer = false; // Consume the reward
+        pendingDesignationForNextRoll.originalRoller = who; 
+        playerRewards.get(who).designateAnswerer = false; 
         console.log(`${who} 的指定回答者奖励已激活。将在下次掷骰前触发。`);
       }
     });
@@ -1488,25 +1480,25 @@ document.addEventListener('DOMContentLoaded', function() {
         let resultMessage = '';
         let rewardType = null;
 
-        if (randomNumber < 50) { // 50% chance of "Thank you for participating"
+        if (randomNumber < 50) { 
             resultMessage = '谢谢参加！';
-        } else if (randomNumber < 50 + 8.33) { // ~8.33%
+        } else if (randomNumber < 50 + 8.33) { 
             resultMessage = '恭喜你！下次可以跳过回答！';
             rewardType = 'skipAnswer';
-        } else if (randomNumber < 50 + 8.33 + 16.67) { // ~16.67%
+        } else if (randomNumber < 50 + 8.33 + 16.67) { 
             resultMessage = '恭喜你！下局回答完可以指定任何一个人投掷回答！';
             rewardType = 'designateAnswerer';
-        } else if (randomNumber < 50 + 8.33 + 16.67 + 16.67) { // ~16.67%
+        } else if (randomNumber < 50 + 8.33 + 16.67 + 16.67) { 
             resultMessage = '恭喜你！下局投掷时可以手动选择点数！';
             rewardType = 'manualDiceEnabled';
-        } else { // Remaining ~8.33%
+        } else { 
             resultMessage = '恭喜你！可以立马指定某个玩家开始投掷骰子！';
             rewardType = 'immediateDesignation';
         }
 
         lotteryMessage.textContent = resultMessage;
         if (resultMessage !== '谢谢参加！') {
-            lotteryMessage.textContent = '🎉 ' + resultMessage; // Add party popper for actual rewards
+            lotteryMessage.textContent = '🎉 ' + resultMessage; 
         }
         lotteryResultModal.style.display = 'flex';
 
@@ -1515,28 +1507,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (rewardType === 'skipAnswer') {
                 rewards.skipAnswer = true;
             } else if (rewardType === 'designateAnswerer') {
-                // This is handled after answer submission now
-                // rewards.designateAnswerer = true; 
+                 rewards.designateAnswerer = true; 
             } else if (rewardType === 'manualDiceEnabled') {
                 rewards.manualDiceEnabled = true;
-                updateManualDiceInputState(); // Immediately update UI for manual dice
+                updateManualDiceInputState(); 
             } else if (rewardType === 'immediateDesignation') {
                 pendingImmediateDesignation.active = true;
                 pendingImmediateDesignation.designatedBy = playerWhoAnswered;
-                // The actual designation happens after this modal is closed
             }
             playerRewards.set(playerWhoAnswered, rewards);
             console.log(`${playerWhoAnswered} 获得的奖励:`, playerRewards.get(playerWhoAnswered));
         }
-        return resultMessage; // Return the message for history
+        return resultMessage; 
     }
 
     closeLotteryModalBtn.addEventListener('click', () => {
         lotteryResultModal.style.display = 'none';
-        // If immediate designation was awarded, show the designation modal now
         if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy) {
-            pendingImmediateDesignation.originalRoller = selectedRoller; // Store current roller before designation
-            showDesignateModal(true); // true for immediate designation
+            pendingImmediateDesignation.originalRoller = selectedRoller; 
+            showDesignateModal(true); 
         }
     });
 
@@ -1553,7 +1542,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 designateMessage.textContent = `玩家 ${designatorName} 获得了“指定下一位回答者”的奖励。请选择由谁来回答本局问题。`;
             }
             
-            designatePlayerList.innerHTML = ''; // Clear previous list
+            designatePlayerList.innerHTML = ''; 
 
             currentPlayers.forEach(player => {
                 const playerItem = document.createElement('div');
@@ -1575,42 +1564,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 playerItem.appendChild(span);
 
                 playerItem.addEventListener('click', () => {
-                    selectPlayer(player.name); // Select the designated player
+                    selectPlayer(player.name); 
                     if (isImmediate) {
-                        // Consume the immediate designation reward (already consumed when set to active)
                         pendingImmediateDesignation.active = false; 
                         pendingImmediateDesignation.designatedBy = null;
                         pendingImmediateDesignation.originalRoller = null;
                     } else {
-                        // Consume the next roll designation reward (already consumed when set to active)
                         pendingDesignationForNextRoll.active = false; 
                         pendingDesignationForNextRoll.designatedBy = null;
                         pendingDesignationForNextRoll.originalRoller = null;
                     }
                     designateModal.style.display = 'none';
-                    resolve(); // Resolve the promise
+                    resolve(); 
                 });
                 designatePlayerList.appendChild(playerItem);
             });
-            // Add a cancel button
             const cancelButton = document.createElement('button');
             cancelButton.textContent = '取消指定';
             cancelButton.style.marginTop = '1rem';
-            cancelButton.style.backgroundColor = '#6c757d'; // Grey color
+            cancelButton.style.backgroundColor = '#6c757d'; 
             cancelButton.addEventListener('click', () => {
                 if (isImmediate) {
-                    pendingImmediateDesignation.active = false; // Deactivate without selecting
-                    selectedRoller = pendingImmediateDesignation.originalRoller; // Restore original roller
+                    pendingImmediateDesignation.active = false; 
+                    selectedRoller = pendingImmediateDesignation.originalRoller; 
                     pendingImmediateDesignation.originalRoller = null;
-                    if(selectedRoller) selectPlayer(selectedRoller.name); // Re-select visually
+                    if(selectedRoller) selectPlayer(selectedRoller.name); 
                 } else {
-                    pendingDesignationForNextRoll.active = false; // Deactivate without selecting
-                     selectedRoller = pendingDesignationForNextRoll.originalRoller; // Restore original roller
+                    pendingDesignationForNextRoll.active = false; 
+                     selectedRoller = pendingDesignationForNextRoll.originalRoller; 
                     pendingDesignationForNextRoll.originalRoller = null;
-                    if(selectedRoller) selectPlayer(selectedRoller.name); // Re-select visually
+                    if(selectedRoller) selectPlayer(selectedRoller.name); 
                 }
                 designateModal.style.display = 'none';
-                resolve(); // Resolve the promise
+                resolve(); 
             });
             designatePlayerList.appendChild(cancelButton);
         });
@@ -1618,7 +1604,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ===== Dice Map Info Modal Logic =====
     function populateDiceMapModal() {
-        diceMapList.innerHTML = ''; // Clear previous list
+        diceMapList.innerHTML = ''; 
         for (const [points, mapInfo] of Object.entries(diceMap)) {
             const listItem = document.createElement('li');
             listItem.innerHTML = `<strong>${points} 点:</strong> <span>${mapInfo.label}</span>`;
@@ -1638,21 +1624,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // ===== History Filtering Logic =====
     function populatePlayerFilter() {
         const currentFilterValue = filterPlayerSelect.value;
-        filterPlayerSelect.innerHTML = '<option value="all">所有玩家</option>'; // Reset
+        filterPlayerSelect.innerHTML = '<option value="all">所有玩家</option>'; 
         currentPlayers.forEach(player => {
             const option = document.createElement('option');
             option.value = player.name;
             option.textContent = player.name;
             filterPlayerSelect.appendChild(option);
         });
-        // Try to restore previous filter selection if player still exists
         if (currentPlayers.some(p => p.name === currentFilterValue)) {
             filterPlayerSelect.value = currentFilterValue;
         }
     }
 
     function renderHistory() {
-        historyDiv.innerHTML = ''; // Clear previous history
+        historyDiv.innerHTML = ''; 
 
         const filterPlayer = filterPlayerSelect.value;
         const filterDate = filterDateSelect.value;
@@ -1665,12 +1650,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (filterDate === 'today') {
                 const today = new Date();
-                const recordDate = new Date(record.date); // Assuming record.date is 'YYYY-MM-DD'
+                const recordDate = new Date(record.date); 
                 if (recordDate.toDateString() !== today.toDateString()) {
                     return false;
                 }
             }
-            // Add more date filters here if needed (e.g., 'yesterday', 'last7days')
 
             if (filterStatus !== 'all' && record.status !== filterStatus) {
                 return false;
@@ -1683,7 +1667,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Display records in reverse chronological order (newest first)
         filteredRecords.slice().reverse().forEach(record => {
             const block = document.createElement('details');
             const summary = document.createElement('summary');
