@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>骰子＋问题挑战</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    :root{--primary:#6366f1;--bg:#f9fafb;--border-color:#e5e7eb;}
+    *{box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen,Ubuntu,Cantarell,"Open Sans","Helvetica Neue",sans-serif;margin:0;padding:2rem;text-align:center;background:var(--bg); color: #333;}
+    h1{margin-bottom:1rem; color: #222;}
+    .section{margin-top:2rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: .75rem; background: #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.08); position: relative;} /* Added position: relative for absolute positioning of info icon */
+    button{padding:.75rem 1.5rem;border:none;border-radius:.5rem;background:var(--primary);color:#fff;cursor:pointer;font-size:1rem; transition: all 0.2s ease-in-out; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+    button:hover{background: #5053e0; transform: translateY(-1px);}
+    button:active{transform: translateY(1px); box-shadow: none;}
+    button[disabled]{opacity:.5;cursor:not-allowed; background: #a0a0a0; transform: none; box-shadow: none;}
+    #dice-face{font-size:4rem;height:4rem;line-height:4rem;margin:.5rem 0; display: inline-block; transition: transform 0.1s ease-out;} /* Added transition for dice */
+
+    /* Player Selection Styles */
+    #playerSelectionContainer {
+      width: 100%;
+      overflow: hidden;
+      padding-bottom: 1rem;
+      display: flex;
+      justify-content: center;
+    }
+    #playerSelection {
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 10px; /* For shadow visibility if cards overflow */
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none;  /* IE 10+ */
+    }
+    #playerSelection::-webkit-scrollbar { /* WebKit */
+        display: none;
+    }
+
+    .player-card {
+      position: relative;
+      flex-shrink: 0; /* Prevent cards from shrinking */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.75rem;
+      border: 2px solid var(--border-color); /* Ensure border is always visible */
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      background-color: #fefefe;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      min-width: 90px; /* Ensure consistent size */
+      height: 100px; /* Ensure consistent size */
+      justify-content: center; /* Center content vertically */
+    }
+    .player-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .player-card.selected {
+      border-color: var(--primary);
+      background-color: #e0e7ff; /* Light primary color for selected state */
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      transform: scale(1.02);
+    }
+    .player-card img {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 0.5rem;
+      border: 2px solid #fff; /* Inner border for avatar */
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .player-card span {
+      font-weight: 600;
+      color: #555;
+    }
+
+    /* Add Player Card */
+    #addPlayerCard {
+      background-color: #f0f4f8;
+      border: 2px dashed var(--border-color);
+      color: #999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem; /* For the plus icon */
+      padding: 0.75rem; /* Consistent with other cards */
+      /* min-width and height are already in .player-card */
+    }
+    #addPlayerCard:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background-color: #e8eef4;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    #addPlayerCard .plus-icon {
+      font-size: 3rem; /* Larger plus icon */
+      line-height: 1;
+    }
+
+    /* New player input modal */
+    #newPlayerModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      display: none; /* Hidden by default */
+      justify-content: center;
+      align-items: center;
+      z-index: 100; /* Ensure it's on top */
+    }
+    #newPlayerModalCard {
+      background: #fff;
+      border-radius: 1rem;
+      padding: 2rem;
+      width: min(90%, 300px); /* Responsive width */
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,.1);
+      animation: fadeIn 0.3s ease-out;
+    }
+    #newPlayerModalCard input {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: .5rem;
+      margin-bottom: 1rem;
+    }
+    #newPlayerModalCard .modal-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+
+    #addPlayerMessage {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: green;
+    }
+    #randomSelectPlayerBtn {
+      margin-top: 1rem;
+      background-color: #17a2b8; /* Teal color for distinction */
+    }
+    #randomSelectPlayerBtn:hover {
+      background-color: #138496;
+    }
+
+    /* Question Scroller Styles */
+    #questionScroller{
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 1rem;
+    }
+    #questionTypeDisplay{
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 1rem;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+    #scrollingQuestionWrapper {
+      position: relative; /* For absolute positioning of items */
+      width: 100%;
+      max-width: 600px; /* Limit width */
+      height: 3.5em; /* Increased height to better accommodate text, especially on wrap */
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    .scrolling-question-item {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      font-weight:600;
+      font-size:1.5rem;
+      height: 100%; /* Fill parent height */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #333;
+      padding: 0 1rem; /* Padding for text */
+      opacity: 0; /* Start hidden for GSAP animation */
+    }
+    .hidden{display:none!important}
+
+    /* Dice Map Info Icon */
+    #diceMapInfoIcon {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 30px;
+        height: 30px;
+        background-color: #a0a0a0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #fff;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: background-color 0.2s ease-in-out;
+    }
+    #diceMapInfoIcon:hover {
+        background-color: #888;
+    }
+
+    /* Dice Map Info Modal */
+    #diceMapModal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.4);
+        display: none; /* Hidden by default */
+        justify-content: center;
+        align-items: center;
+        z-index: 100; /* Ensure it's on top */
+    }
+    #diceMapModalCard {
+        background: #fff;
+        border-radius: 1rem;
+        padding: 2rem;
+        width: min(90%, 400px); /* Responsive width */
+        text-align: left;
+        box-shadow: 0 10px 30px rgba(0,0,0,.1);
+        animation: fadeIn 0.3s ease-out;
+    }
+    #diceMapModalCard h2 {
+        margin-top: 0;
+        color: var(--primary);
+        text-align: center;
+    }
+    #diceMapModalCard ul {
+        list-style: none;
+        padding: 0;
+        margin: 1rem 0;
+    }
+    #diceMapModalCard ul li {
+        padding: 0.5rem 0;
+        border-bottom: 1px dashed #eee;
+        display: flex;
+        justify-content: space-between;
+        font-size: 1.1rem;
+    }
+    #diceMapModalCard ul li:last-child {
+        border-bottom: none;
+    }
+    #diceMapModalCard .modal-buttons {
+        text-align: center;
+        margin-top: 1.5rem;
+    }
+
+
+    /* Modal Styles */
+    #questionModal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;justify-content:center;align-items:center;z-index:10}
+    #modalCard{background:#fff;border-radius:1rem;padding:2rem;width:min(90%,480px);text-align:left;box-shadow:0 10px 30px rgba(0,0,0,.1); animation: fadeIn 0.3s ease-out;}
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    #modalCard h2{margin-top:0}
+    label{display:block;margin:.5rem 0 .2rem;font-weight:600}
+    select,textarea, input[type="text"]{width:100%;padding:.6rem;border:1px solid #ccc;border-radius:.3rem; margin-bottom: .5rem;}
+    textarea{min-height:80px;resize:vertical}
+    details{margin-top:1rem;text-align:left;border:1px solid #e5e7eb;padding:.6rem;border-radius:.5rem;background:#fff}
+    summary{cursor:pointer;font-weight:600}
+
+    /* New Designation Modal */
+    #designateModal, #lotteryResultModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.4);
+      display: none; /* Hidden by default */
+      justify-content: center;
+      align-items: center;
+      z-index: 20; /* Above question modal if needed */
+    }
+    #designateModalCard, #lotteryResultModalCard {
+      background: #fff;
+      border-radius: 1rem;
+      padding: 2rem;
+      width: min(90%, 400px); /* Responsive width */
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,.1);
+      animation: fadeIn 0.3s ease-out;
+    }
+    #designateModalCard h2, #lotteryResultModalCard h2 {
+      margin-top: 0;
+      color: var(--primary);
+    }
+    #designatePlayerList {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .designate-player-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+    }
+    .designate-player-item:hover {
+      background-color: #f0f0f0;
+      border-color: var(--primary);
+    }
+    .designate-player-item img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 0.25rem;
+    }
+    .designate-player-item span {
+      font-size: 0.9rem;
+    }
+
+    /* Physical Dice Input */
+    #manualDiceInputGroup {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    #manualDiceInput {
+      width: 80px;
+      text-align: center;
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: .5rem;
+    }
+    #useManualDiceBtn {
+      background-color: #6c757d; /* Grey color */
+    }
+    #useManualDiceBtn:hover {
+      background-color: #5a6268;
+    }
+
+    /* Yes/No Buttons for "是否作答" */
+    #willAnswerButtons {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+      justify-content: center;
+    }
+    .will-answer-btn {
+      flex: 1;
+      max-width: 120px;
+      padding: 0.75rem;
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      background-color: #f0f0f0;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      font-weight: 600;
+      color: #555;
+    }
+    .will-answer-btn:hover {
+      background-color: #e0e0e0;
+    }
+    .will-answer-btn.selected {
+      background-color: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    /* Penalty Options as flat buttons */
+    #penaltyOptionsContainer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      justify-content: center;
+    }
+    .penalty-option-btn {
+      padding: 0.6rem 1.2rem;
+      border: 1px solid #ccc;
+      border-radius: 0.5rem;
+      background-color: #f8f8f8;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      font-size: 0.95rem;
+      color: #333;
+    }
+    .penalty-option-btn:hover {
+      background-color: #e8e8e8;
+      border-color: #999;
+    }
+    .penalty-option-btn.selected {
+      background-color: #f44336; /* Red for selected penalty */
+      color: #fff;
+      border-color: #d32f2f;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .penalty-option-btn.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* History Filter Styles */
+    .history-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      justify-content: center;
+      align-items: center;
+    }
+    .history-filters select {
+        padding: 0.6rem;
+        border: 1px solid #ccc;
+        border-radius: .5rem;
+        background-color: #fff;
+        font-size: 1rem;
+        flex-grow: 1;
+        min-width: 120px;
+        max-width: 200px;
+    }
+    .history-filters label {
+        margin-bottom: 0;
+        margin-right: 0.5rem;
+        font-weight: 600;
+        color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎲 骰子 & 问题挑战</h1>
+
+  <div class="section">
+    <p style="font-weight: 600; margin-bottom: 1rem;">选择掷骰子的人（长按头像删除新玩家）：</p>
+    <div id="playerSelectionContainer">
+      <div id="playerSelection">
+        </div>
+    </div>
+    <p id="addPlayerMessage" class="hidden"></p>
+    <button id="randomSelectPlayerBtn">随机选择玩家</button>
+  </div>
+
+  <div class="section">
+    <button id="rollBtn" disabled>掷骰子</button>
+    <span id="dice-face">⚀</span>
+    <p id="dice-result"></p>
+    <div id="manualDiceInputGroup">
+      <input type="number" id="manualDiceInput" min="1" max="6" placeholder="手动输入点数">
+      <button id="useManualDiceBtn">使用手动点数</button>
+    </div>
+    <div id="diceMapInfoIcon">?</div> </div>
+
+  <div id="questionScroller" class="section hidden">
+    <p id="questionTypeDisplay"></p>
+    <div id="scrollingQuestionWrapper">
+        <div class="scrolling-question-item" id="scrollingQuestion1"></div>
+        <div class="scrolling-question-item" id="scrollingQuestion2"></div>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+      <button id="startStopScrollBtn">开始滚动</button>
+      <button id="selectQuestionBtn" disabled>选择问题</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>历史记录</h2>
+    <div class="history-filters">
+        <label for="filterPlayer">玩家:</label>
+        <select id="filterPlayer">
+            <option value="all">所有玩家</option>
+        </select>
+
+        <label for="filterDate">日期:</label>
+        <select id="filterDate">
+            <option value="all">所有时间</option>
+            <option value="today">今天</option>
+            </select>
+
+        <label for="filterStatus">状态:</label>
+        <select id="filterStatus">
+            <option value="all">所有状态</option>
+            <option value="answered">已作答</option>
+            <option value="skipped">已跳过</option>
+            <option value="penalized">已惩罚</option>
+        </select>
+    </div>
+    <div id="history"></div>
+  </div>
+
+  <div id="questionModal">
+    <div id="modalCard">
+      <h2 id="modalQuestion"></h2>
+      <form id="answerForm">
+        <label for="answererDisplay">回答者</label>
+        <p id="answererDisplay" style="font-weight: 600; font-size: 1.1rem; margin-bottom: 1rem; color: #555;"></p>
+
+        <label>是否作答</label>
+        <div id="willAnswerButtons">
+          <button type="button" class="will-answer-btn" data-value="Yes">是</button>
+          <button type="button" class="will-answer-btn" data-value="No">否</button>
+        </div>
+
+        <div id="answerFieldGroup" class="hidden"> <label for="answer">回答内容</label>
+          <textarea id="answer" placeholder="在此输入答案…"></textarea>
+        </div>
+
+        <div id="noAnswerOptions" class="hidden"> <label>选择惩罚：</label>
+          <div id="penaltyOptionsContainer">
+            </div>
+        </div>
+
+        <button type="submit" style="margin-top:1rem;">保存记录</button>
+        <button type="button" id="closeModal" style="margin-top:1rem;background:#e5e7eb;color:#000;">取消</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="designateModal">
+    <div id="designateModalCard">
+      <h2>指定下一位回答者</h2>
+      <p id="designateMessage"></p>
+      <div id="designatePlayerList">
+        </div>
+    </div>
+  </div>
+
+  <div id="lotteryResultModal">
+    <div id="lotteryResultModalCard">
+      <h2>抽奖结果</h2>
+      <p id="lotteryMessage"></p>
+      <button id="closeLotteryModalBtn" style="margin-top:1rem;">好的</button>
+    </div>
+  </div>
+
+  <div id="newPlayerModal">
+    <div id="newPlayerModalCard">
+      <h2>添加新玩家</h2>
+      <input type="text" id="newPlayerNameInput" placeholder="输入新玩家名字">
+      <p id="newPlayerModalMessage" style="font-size: 0.9rem; color: red; margin-bottom: 0.5rem;"></p>
+      <div class="modal-buttons">
+        <button id="confirmAddPlayerBtn">添加</button>
+        <button id="cancelAddPlayerBtn" style="background-color: #6c757d;">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="diceMapModal">
+    <div id="diceMapModalCard">
+      <h2>骰子点数与问题类型</h2>
+      <ul id="diceMapList">
+        </ul>
+      <div class="modal-buttons">
+        <button id="closeDiceMapModalBtn" style="background-color: #6c757d;">关闭</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  (function(){
+    // ===== Question Bank =====
+    const questionBank={
+      emotional_basic:[
+        { text: "你今天最真实的情绪是什么？" }, { text: "最近一次感动你的瞬间？" }, { text: "想到童年最温暖的回忆？" },
+        { text: "什么事情让你感到最幸福？" }, { text: "你如何应对压力和焦虑？" }, { text: "描述一次让你感到脆弱的经历。" },
+        { text: "你对“爱”的理解是什么？" }, { text: "什么让你感到最放松？" }, { text: "你最想对过去的自己说什么？" },
+        { text: "什么让你感到最有力量？" }, { text: "你最珍贵的记忆是什么？" }, { text: "什么让你感到最内疚？" },
+        { text: "你如何看待失败？" }, { text: "什么让你感到最自豪？" }, { text: "你对未来的最大希望是什么？" },
+        { text: "你最近一次哭泣是什么时候？为什么？" }, { text: "什么让你感到最愤怒？" }, { text: "你如何表达感谢？" },
+        { text: "你最喜欢自己的哪个特点？" }, { text: "什么让你感到最平静？" },
+        { text: "你对友谊的看法是什么？" }, { text: "什么让你感到最满足？" }, { text: "你如何处理人际关系中的冲突？" },
+        { text: "你有没有什么让你感到后悔的事情？" }, { text: "什么让你感到最无助？" }, { text: "你如何寻找内心的平静？" },
+        { text: "你最想对谁说声谢谢？" }, { text: "什么让你感到最沮丧？" }, { text: "你如何面对生活中的不确定性？" },
+        { text: "你认为什么是真正的快乐？" }, { text: "你有没有因为一首歌而泪流满面？" }, { text: "什么让你感到最孤单？" },
+        { text: "你最想弥补的遗憾是什么？" }, { text: "你如何看待别人的批评？" }, { text: "什么让你感到最温暖？" },
+        { text: "你有没有过一个让你感到非常幸福的白日梦？" }, { text: "你认为什么是真正的善良？" }, { text: "你如何看待自己的缺点？" },
+        { text: "什么让你感到最害怕失去？" },
+        { text: "你最希望别人如何记住你？" }, { text: "你有没有因为一句话而改变了生活？" },
+        { text: "什么让你感到最惊喜？" }, { text: "你如何处理自己的负面情绪？" }, { text: "你有没有过对某个人或事一见钟情？" },
+        { text: "什么让你感到最不公平？" }, { text: "你认为自己最大的优点是什么？" }, { text: "你有没有一个秘密，从没告诉过任何人？" },
+        { text: "什么让你感到最遗憾？" }, { text: "你如何看待自我成长？" }, { text: "你有没有一个让你感到非常自豪的时刻？" },
+        { text: "什么让你感到最无聊？" }, { text: "你对家庭的理解是什么？" }, { text: "你有没有过一个让你感到非常尴尬的经历？" },
+        { text: "什么让你感到最沮丧？" }, { text: "你如何看待人生的意义？" }, { text: "你有没有过一个让你感到非常失望的时刻？" },
+        { text: "什么让你感到最兴奋？" }, { text: "你如何看待自己的未来？" }, { text: "你有没有过一个让你感到非常满足的时刻？" },
+        { text: "什么让你感到最疲惫？" }, { text: "你如何看待爱情和婚姻？" }, { text: "你有没有一个让你感到非常感激的人？" },
+        { text: "什么让你感到最舒适？" }, { text: "你如何看待自己的梦想？" }, { text: "你有没有一个让你感到非常幸福的瞬间？" },
+        { text: "你最想念的人是谁？" }, { text: "什么让你感到最有动力？" }, { text: "你有没有一个让你感到非常痛苦的决定？" },
+        { text: "什么让你感到最平静？" }, { text: "你如何处理自己的情绪？" }, { text: "你有没有一个让你感到非常心痛的经历？" },
+        { text: "什么让你感到最安全？" }, { text: "你认为什么才能让你真正开心？" }, { text: "你有没有一个让你感到非常孤独的时刻？" },
+        { text: "什么让你感到最有活力？" }, { text: "你如何看待自己的过去？" }, { text: "你有没有一个让你感到非常遗憾的错过？" },
+        { text: "什么让你感到最无拘无束？" }, { text: "你认为人生中最重要的是什么？" }, { text: "你有没有一个让你感到非常幸福的时刻？" },
+        { text: "什么让你感到最自由？" }, { text: "你如何看待自己的选择？" }, { text: "你有没有一个让你感到非常难忘的经历？" },
+        { text: "什么让你感到最充实？" }, { text: "你认为人生中最美好的事情是什么？" }, { text: "你有没有一个让你感到非常惊讶的时刻？" },
+        { text: "什么让你感到最放松？" }, { text: "你如何看待自己的内心？" }, { text: "你有没有一个让你感到非常感动的瞬间？" },
+        { text: "什么让你感到最有创造力？" }, { text: "你认为什么才能让你真正满足？" }, { text: "你有没有一个让你感到非常幸福的时刻？" },
+        { text: "什么让你感到最有意义？" }
+      ],
+      emotional_pro:[
+        { text: "描述一次让你彻底崩溃又重生的经历。你如何从废墟中重建自我？" }, { text: "你对亲密关系中界限的看法？有没有曾因界限不清而受伤？" }, { text: "当你感到深深孤独时如何自处？是寻求陪伴还是享受独处？" },
+        { text: "你认为情绪在决策中扮演什么角色？是理性的辅助还是干扰？" }, { text: "如何平衡个人需求与他人期望？有没有为此做出过艰难选择？" }, { text: "你对死亡和生命的意义有何思考？有没有哪个时刻让你感到生命短暂而珍贵？" },
+        { text: "什么让你感到最恐惧，以及你如何面对它？这种恐惧是否曾阻碍你前进？" }, { text: "你如何定义“成功”和“失败”？有没有一次“失败”最终成就了你？" }, { text: "描述一次你原谅了自己或他人的经历。那次原谅给你带来了什么？" },
+        { text: "你认为什么才是真正的自由？是财务自由、精神自由还是其他？" }, { text: "你有没有过灵魂出窍的经历？或者感觉自己像旁观者一样审视生活？" }, { text: "你认为人生的终极目标是什么？是追求快乐、意义还是平静？" },
+        { text: "你如何看待人性的善与恶？有没有哪个瞬间让你对人性感到绝望或充满希望？" }, { text: "什么让你感到最无力？你如何应对这种无力感？" }, { text: "你如何处理背叛和失望？是选择报复、遗忘还是原谅？" },
+        { text: "你认为什么是真正的勇气？是敢于冒险还是敢于面对真实的自己？" }, { text: "你对自己的内心世界了解多少？有没有一个连你自己都感到惊讶的角落？" }, { text: "你如何看待命运和选择？你相信宿命论还是自由意志？" },
+        { text: "什么让你感到最困惑？你有没有一个无论如何都想不明白的问题？" }, { text: "你认为自己最大的弱点是什么？你正在如何努力克服它？" },
+        { text: "你对集体无意识有什么看法？你觉得自己有没有受到过集体情绪的影响？" }, { text: "你如何看待生命的脆弱与坚韧？有没有哪个瞬间让你感到生命如此顽强？" }, { text: "你认为什么是真正的智慧？是知识渊博还是洞察人性？" },
+        { text: "你有没有过与自己内心对话的经历？你通常会和自己聊些什么？" }, { text: "你如何面对存在的虚无感？是选择逃避还是积极应对？" }, { text: "你认为什么是真正的幸福？它是一种状态还是一种追求？" },
+        { text: "你对宇宙的起源有何看法？你相信科学解释还是神创论？" }, { text: "如果你能改变一项物理定律，你会改变什么？为什么？" }, { text: "你认为世界上最神秘的现象是什么？你希望它被揭开谜底吗？" },
+        { text: "如果你能创造一个全新的世界，你会创造一个怎样的世界？它的规则和价值观是什么？" }, { text: "你最近一次性幻想的对象是谁？是真实的人还是虚构的？" },
+        { text: "你有没有因为性而感到困惑或羞耻？这种感觉来自哪里？" }, { text: "你认为在一段关系中，性扮演了怎样的角色？是必需品还是锦上添花？" },
+        { text: "描述一次让你感到性吸引力最强烈的时刻。是什么让你产生了这种感觉？" }, { text: "你对开放式关系或多角恋有什么看法？你认为它们可行吗？" },
+        { text: "你有没有为自己的性取向或性别认同挣扎过？你最终是如何接纳自己的？" }, { text: "如果可以，你最想体验哪种不同的性经验？为什么？" },
+        { text: "你认为在性方面，最重要的是什么？是激情、连接还是满足？" }, { text: "你有没有对某个人的身体部位特别着迷？为什么？" },
+        { text: "你对“忠诚”在亲密关系中的理解是什么？是身体的忠诚还是精神的忠诚？" }, { text: "描述一次让你感到灵魂被触动的经历。那是什么样的感觉？" },
+        { text: "你有没有对某个禁忌话题感到好奇？你认为为什么它是禁忌？" }, { text: "你认为什么是人类最深层的欲望？是生存、繁衍还是被爱？" },
+        { text: "你有没有感到过自己不被理解，即使是最亲近的人？你如何应对这种感觉？" }, { text: "如果你能拥有一种超凡的洞察力，你会想看透什么？是人心、未来还是宇宙奥秘？" },
+        { text: "你认为人类文明的终极归宿是什么？是毁灭、进化还是永恒？" }, { text: "你有没有对权力或控制产生过强烈的渴望？你认为这种渴望源于何处？" },
+        { text: "描述一次你感到被命运捉弄的经历。你如何看待那次经历？" }, { text: "你有没有对死亡有过深刻的恐惧或思考？你相信有来世吗？" },
+        { text: "你认为什么才能真正让人感到满足？是物质财富、精神富足还是其他？" }, { text: "你对自己的性魅力有信心吗？你认为自己的魅力点在哪里？" },
+        { text: "你有没有过一个让你感到非常性感的梦境？你记得梦境的细节吗？" }, { text: "你认为性教育应该如何进行？应该包含哪些内容？" },
+        { text: "你有没有因为性而感到兴奋或紧张？这两种感觉是如何并存的？" }, { text: "你认为最极致的快感是什么？它来自哪里？" },
+        { text: "你有没有对自己的欲望感到困惑？你如何探索和理解自己的欲望？" }, { text: "你如何看待约会和一夜情？你认为它们有什么区别和联系？" },
+        { text: "你有没有因为性而感到快乐或沮丧？这两种情绪是如何交织的？" }, { text: "你认为在性方面，最重要的事情是什么？是沟通、尊重还是探索？" },
+        { text: "你有没有对自己的性经验感到满意？你认为还有什么可以改进的地方？" }, { text: "你认为最理想的性伴侣是什么样的？是灵魂伴侣还是肉体伴侣？" },
+        { text: "你有没有因为性而感到羞耻或尴尬？你如何克服这些负面情绪？" }, { text: "你认为性与爱之间有何关系？是相互依存还是独立存在？" },
+        { text: "你有没有对自己的性癖好感到好奇？你是否愿意尝试新的体验？" }, { text: "你认为在性方面，最重要的是什么？是自我认知、开放心态还是其他？" },
+        { text: "你有没有因为性而感到兴奋或恐惧？这两种情绪是如何影响你的？" }, { text: "你认为最完美的性生活是什么样的？它包含了哪些元素？" },
+        { text: "你有没有对自己的性生活感到满意？你觉得还有什么可以探索的？" }, { text: "你认为性爱是艺术还是本能？它包含了哪些创造性元素？" },
+        { text: "你有没有对某个明星或公众人物有过性幻想？你认为这正常吗？" }, { text: "你认为在公共场合表现亲密行为的界限在哪里？你如何看待不同文化中的差异？" }, { text: "你对“性同意”的理解是什么？你认为在任何情况下都应该明确表达同意吗？" },
+        { text: "你有没有因为性而感到自己更有力量？这种力量感来自哪里？" }, { text: "你对自己的身体有哪些自豪或不满意的地方？你如何看待身体形象？" }, { text: "你有没有和朋友分享过自己的性秘密？你认为这有助于增进友谊吗？" },
+        { text: "你对“性解放”的看法是什么？你认为它带来了积极还是消极的影响？" }, { text: "你有没有在性方面尝试过一些新的东西？你从中获得了什么？" }, { text: "你认为性在人生中占据多大比重？它对你的生活有多重要？" },
+        { text: "你有没有因为性而感到被误解？你如何解释自己的感受？" }, { text: "你对自己的性能力有何评价？你认为它对你的自信心有影响吗？" }, { text: "你有没有因为性而感到尴尬或好笑的经历？你如何看待这些经历？" },
+        { text: "你认为最糟糕的性经历是什么样的？你从中吸取了什么教训？" }, { text: "你有没有因为性而感到自己更加开放？你认为这是一种成长吗？" }, { text: "你如何看待不同的性癖好？你认为它们应该被尊重吗？" },
+        { text: "你有没有对自己的性幻想感到惊讶？你认为性幻想反映了什么？" }, { text: "你认为性爱中最重要的因素是什么？是沟通、信任还是激情？" }, { text: "你有没有因为性而感到自己更加亲近某人？你认为性是建立亲密关系的桥梁吗？" },
+        { text: "你对“性骚扰”的理解是什么？你认为我们应该如何应对性骚扰？" }, { text: "你有没有在性方面犯过错误？你如何弥补这些错误？" }, { text: "你认为性教育应该从几岁开始？它应该在学校还是家庭中进行？" },
+        { text: "你有没有对性有过任何疑问？你通常会向谁寻求答案？" }, { text: "你认为性在文化中扮演了怎样的角色？它如何影响社会价值观？" }, { text: "你有没有因为性而感到被束缚？你如何寻求性自由？" },
+        { text: "你对自己的性吸引力有何评价？你认为它对你的社交生活有影响吗？" }, { text: "你有没有因为性而感到自己更加成熟？你认为性是成长的一部分吗？" }, { text: "你认为性对一个人的心理健康有何影响？它会带来积极还是消极的影响？" },
+        { text: "你有没有对自己的性生活感到好奇？你是否愿意探索更多？" }, { text: "你认为性在一段长期的关系中是如何变化的？它会随着时间而改变吗？" }, { text: "你有没有因为性而感到自己更加快乐？你认为性是幸福的源泉吗？" },
+        { text: "你对“身体羞辱”的看法是什么？你认为我们应该如何应对身体羞辱？" }, { text: "你有没有在性方面感到过压力？你如何应对这些压力？" }, { text: "你认为性对社会有什么影响？它会促进社会进步还是带来负面影响？" },
+        { text: "你有没有对自己的性知识感到不足？你如何获取性知识？" }, { text: "你认为性在不同年龄段有什么不同？它会随着年龄而改变吗？" }, { text: "你有没有因为性而感到自己更加自信？你认为性是自信的来源吗？" },
+        { text: "你对“性工作者”的看法是什么？你认为他们应该受到尊重吗？" }, { text: "你有没有在性方面感到过恐惧？你如何克服这些恐惧？" }, { text: "你认为性教育应该包含哪些内容？它应该如何适应不同年龄段的需求？" },
+        { text: "你有没有对自己的性需求感到困惑？你如何理解和满足自己的性需求？" }, { text: "你认为性在不同的文化中有什么不同？它如何受到文化背景的影响？" }, { text: "你有没有因为性而感到自己更加自由？你认为性是自我表达的一种方式吗？" },
+        { text: "你对“性瘾”的看法是什么？你认为它是一种疾病吗？" }, { text: "你有没有在性方面感到过迷茫？你如何找到自己的方向？" }, { text: "你认为性对人类的进化有什么影响？它如何塑造了人类社会？" }
+      ],
+      hobby_basic:[
+        { text: "你最喜欢的休闲活动？" }, { text: "最近入坑的兴趣是什么？" }, { text: "如果有一天假期，你会做什么？" },
+        { text: "你最喜欢的一本书/电影/音乐是什么？为什么？" }, { text: "你有没有什么隐藏的才能或爱好？" }, { text: "你最想学习的新技能是什么？" },
+        { text: "你最喜欢去的地方是哪里？" }, { text: "你最近一次的旅行经历是怎样的？" }, { text: "你最喜欢的一道菜是什么？" },
+        { text: "你平时如何放松自己？" }, { text: "你最喜欢玩的游戏是什么？" }, { text: "你有没有收集癖？" },
+        { text: "你最喜欢的一件衣服是什么？" }, { text: "你最喜欢的一种运动是什么？" }, { text: "你有没有什么特别的爱好？" },
+        { text: "你最喜欢的一种艺术形式是什么？" }, { text: "你有没有什么让你感到兴奋的爱好？" }, { text: "你最喜欢的一种动物是什么？" },
+        { text: "你最喜欢的一种植物是什么？" }, { text: "你最喜欢的一种颜色是什么？" },
+        { text: "你最喜欢哪种类型的音乐？" }, { text: "你有没有什么让你感到放松的爱好？" }, { text: "你最喜欢哪种类型的电影？" },
+        { text: "你有没有什么让你感到兴奋的运动？" }, { text: "你最喜欢哪种类型的书？" }, { text: "你有没有什么让你感到快乐的爱好？" },
+        { text: "你最喜欢哪种类型的游戏？" }, { text: "你有没有什么让你感到满足的爱好？" }, { text: "你最喜欢哪种类型的艺术？" },
+        { text: "你有没有什么让你感到有趣的爱好？" }, { text: "你最喜欢哪种类型的播客？" }, { text: "你有没有一个让你感到非常平静的爱好？" },
+        { text: "你最喜欢哪种类型的电视节目？" }, { text: "你有没有一个让你感到非常兴奋的爱好？" }, { text: "你最喜欢哪种类型的表演艺术？" },
+        { text: "你有没有一个让你感到非常愉快的爱好？" }, { text: "你最喜欢哪种类型的摄影？" }, { text: "你有没有一个让你感到非常惊喜的爱好？" },
+        { text: "你最喜欢哪种类型的绘画？" }, { text: "你有没有一个让你感到非常舒服的爱好？" }, { text: "你最喜欢哪种类型的雕塑？" },
+        { text: "你有没有一个让你感到非常有趣的爱好？" }, { text: "你最喜欢哪种类型的写作？" }, { text: "你有没有一个让你感到非常放松的爱好？" },
+        { text: "你最喜欢哪种类型的烹饪？" }, { text: "你有没有一个让你感到非常兴奋的经历？" }, { text: "你最喜欢哪种类型的园艺？" },
+        { text: "你有没有一个让你感到非常愉快的体验？" }, { text: "你最喜欢哪种类型的舞蹈？" }, { text: "你有没有一个让你感到非常惊喜的发现？" },
+        { text: "你最喜欢哪种类型的旅行？" }, { text: "你有没有一个让你感到非常舒服的活动？" }, { text: "你最喜欢哪种类型的户外活动？" },
+        { text: "你有没有一个让你感到非常有趣的时刻？" }, { text: "你最喜欢哪种类型的手工制作？" }, { text: "你有没有一个让你感到非常放松的假期？" },
+        { text: "你最喜欢哪种类型的桌面游戏？" }, { text: "你有没有一个让你感到非常满足的时刻？" }, { text: "你最喜欢哪种类型的播客？" },
+        { text: "你有没有一个让你感到非常好奇的爱好？" }, { text: "你最喜欢哪种类型的电子游戏？" }, { text: "你有没有一个让你感到非常惊喜的发现？" },
+        { text: "你最喜欢哪种类型的漫画？" }, { text: "你有没有一个让你感到非常放松的活动？" }, { text: "你最喜欢哪种类型的动画？" },
+        { text: "你有没有一个让你感到非常有趣的冒险？" }, { text: "你最喜欢哪种类型的设计？" }, { text: "你有没有一个让你感到非常平静的爱好？" },
+        { text: "你最喜欢哪种类型的编程？" }, { text: "你有没有一个让你感到非常兴奋的学习经历？" }, { text: "你最喜欢哪种类型的历史研究？" },
+        { text: "你有没有一个让你感到非常愉快的创造过程？" }, { text: "你最喜欢哪种类型的哲学思考？" }, { text: "你有没有一个让你感到非常满足的成就？" },
+        { text: "你最喜欢哪种类型的志愿服务？" }, { text: "你有没有一个让你感到非常有趣的观察？" }, { text: "你最喜欢哪种类型的科普知识？" },
+        { text: "你有没有一个让你感到非常惊喜的进步？" }, { text: "你最喜欢哪种类型的写作形式？" }, { text: "你有没有一个让你感到非常放松的周末？" },
+        { text: "你最喜欢哪种类型的益智游戏？" }, { text: "你有没有一个让你感到非常兴奋的挑战？" }, { text: "你最喜欢哪种类型的户外运动？" },
+        { text: "你有没有一个让你感到非常有趣的讨论？" }
+      ],
+      hobby_pro:[
+        { text: "你想在未来精进的技能？它将如何改变你的生活？" }, { text: "兴趣爱好给你的身份认同带来什么？你有没有因此而改变对自己的看法？" }, { text: "如果要开设工作坊，你会教什么？你希望通过它传递什么？" },
+        { text: "你认为爱好对个人成长有何影响？它如何塑造了今天的你？" }, { text: "你有没有为了爱好而做出过重大牺牲？你后悔吗？" }, { text: "你如何将爱好融入日常生活？是工作之余的调剂还是生活的主旋律？" },
+        { text: "你最想和谁一起探索新的爱好？为什么是TA？" }, { text: "你认为爱好和职业之间应该如何平衡？有没有可能将爱好变成职业？" }, { text: "描述一次你通过爱好克服困难的经历。那次经历教会了你什么？" },
+        { text: "你对未来有哪些关于爱好的规划？你希望通过爱好实现什么？" }, { text: "你有没有因为爱好而结识新朋友？这些朋友对你意味着什么？" }, { text: "你认为爱好能带来哪些意想不到的收获？有没有哪个收获让你感到惊喜？" },
+        { text: "你有没有因为爱好而改变人生轨迹？那是一个怎样的转折点？" }, { text: "你对自己的爱好有什么独特的见解？你认为它有什么特别之处？" }, { text: "你有没有因为爱好而感到压力？你如何应对这种压力？" },
+        { text: "你如何看待爱好和金钱的关系？它们是相互促进还是相互制约？" }, { text: "你有没有因为爱好而感到孤独？你如何排解这种孤独感？" }, { text: "你如何平衡爱好和家庭生活？有没有因此而产生过矛盾？" },
+        { text: "你对自己的爱好有什么长远的规划？你希望它在未来发展成什么样子？" }, { text: "你有没有因为爱好而感到自豪？那是一个怎样的时刻？" },
+        { text: "你认为爱好在社会中扮演什么角色？它如何影响社会发展？" }, { text: "你有没有因为爱好而感到沮丧？你如何走出低谷？" }, { text: "你如何看待爱好和学习的关系？它们是相互补充还是相互竞争？" },
+        { text: "你有没有因为爱好而感到迷茫？你如何找到方向？" }, { text: "你对自己的爱好有什么新的想法？你希望尝试哪些新的挑战？" }, { text: "你如何看待爱好和竞争的关系？你享受竞争还是更喜欢合作？" },
+        { text: "你有没有因为爱好而感到无聊？你如何保持对爱好的热情？" }, { text: "你如何平衡爱好和健康？有没有因为爱好而牺牲健康？" }, { text: "你对自己的爱好有什么新的挑战？你希望突破哪些瓶颈？" },
+        { text: "你有没有因为爱好而感到疲惫？你如何恢复精力？" }, { text: "如果你能成为任何一个领域的大师，你会选择哪个领域？为什么？" }, { text: "你对“匠人精神”的理解是什么？你认为它在现代社会还有意义吗？" },
+        { text: "你有没有因为爱好而改变了自己的人生观？那是一个怎样的转变？" }, { text: "你认为爱好对一个人的精神世界有多重要？它如何滋养你的灵魂？" }, { text: "你有没有为了一个爱好而放弃过其他重要的东西？你后悔吗？" },
+        { text: "你如何看待爱好和专注力的关系？它们是相互促进还是相互干扰？" }, { text: "你有没有因为爱好而感到自己与众不同？你如何看待这种不同？" }, { text: "你认为爱好可以帮助我们更好地了解自己吗？它如何揭示你的潜能？" },
+        { text: "你有没有因为爱好而感到自己更加完整？它如何弥补你内心的缺失？" }, { text: "你如何看待爱好和创造力的关系？它们是相互激发还是相互限制？" }, { text: "你有没有因为爱好而感到自己更加自由？这种自由感来自哪里？" },
+        { text: "你认为爱好可以帮助我们更好地应对生活中的挑战吗？它如何成为你的避风港？" }, { text: "你有没有因为爱好而感到自己更加自信？这种自信心来自哪里？" }, { text: "你如何看待爱好和人际关系的关系？它们是相互促进还是相互阻碍？" },
+        { text: "你有没有因为爱好而感到自己更加快乐？你认为快乐的源泉是什么？" }, { text: "你认为爱好可以帮助我们更好地实现自我价值吗？它如何让你感到有成就感？" }, { text: "你有没有因为爱好而感到自己更加充实？你认为充实的生活是怎样的？" },
+        { text: "你如何看待爱好和学习新事物的关系？它们是相互促进还是相互排斥？" }, { text: "你有没有因为爱好而感到自己更加有活力？这种活力感来自哪里？" }, { text: "你认为爱好可以帮助我们更好地面对未来的不确定性吗？它如何让你感到安心？" },
+        { text: "你有没有因为爱好而感到自己更加有意义？你认为生命的意义是什么？" }, { text: "你如何看待爱好和生活平衡的关系？它们是相互协调还是相互冲突？" }, { text: "你有没有因为爱好而感到自己更加有创造力？你认为创造力的本质是什么？" },
+        { text: "你认为爱好可以帮助我们更好地发现自己的潜力吗？它如何让你感到惊喜？" }, { text: "你有没有因为爱好而感到自己更加有耐心？这种耐心来自哪里？" }, { text: "你如何看待爱好和自我实现的关系？它们是相互依存还是相互独立？" },
+        { text: "你有没有因为爱好而感到自己更加智慧？你认为智慧的本质是什么？" }, { text: "你如何看待爱好和精神健康的关系？它们是相互影响还是相互独立？" }, { text: "你有没有因为爱好而感到自己更加平静？这种平静感来自哪里？" },
+        { text: "你认为爱好可以帮助我们更好地应对孤独吗？它如何成为你的精神寄托？" }, { text: "你有没有因为爱好而感到自己更加有韧性？这种韧性来自哪里？" }, { text: "你如何看待爱好和自我表达的关系？它们是相互促进还是相互限制？" },
+        { text: "你有没有因为爱好而感到自己更加有方向？这种方向感来自哪里？" }, { text: "你认为爱好可以帮助我们更好地理解世界吗？它如何拓宽你的视野？" }, { text: "你有没有因为爱好而感到自己更加有深度？这种深度来自哪里？" },
+        { text: "你如何看待爱好和社群的关系？它们是相互促进还是相互阻碍？" }, { text: "你有没有因为爱好而感到自己更加有影响力？这种影响力来自哪里？" }, { text: "你认为爱好可以帮助我们更好地面对人生的挑战吗？它如何成为你的力量源泉？" },
+        { text: "你有没有因为爱好而感到自己更有乐趣？你认为乐趣的本质是什么？" }, { text: "你如何看待爱好和可持续发展的关系？它们是相互促进还是相互限制？" }, { text: "你有没有因为爱好而感到自己更有责任感？这种责任感来自哪里？" },
+        { text: "你认为爱好可以帮助我们更好地应对变化吗？它如何让你感到适应？" }, { text: "你有没有因为爱好而感到自己更有好奇心？这种好奇心来自哪里？" }, { text: "你如何看待爱好和个人品牌的建立？它们是相互促进还是相互限制？" },
+        { text: "你有没有因为爱好而感到自己更有耐心？这种耐心来自哪里？" }, { text: "你认为爱好可以帮助我们更好地理解自己吗？它如何让你感到自我认知？" }, { text: "你有没有因为爱好而感到自己更有动力？这种动力来自哪里？" }
+      ],
+      quirky_basic:[
+        { text: "如果你是蔬菜，你觉得自己是哪一种？为什么？" }, { text: "手机里最奇怪的照片？可以描述一下吗？" }, { text: "一个毫无意义但让你快乐的小事实？" },
+        { text: "你最喜欢的一种天气是什么？为什么？" }, { text: "如果你能和任何动物说话，你会选择哪种？你会问它什么？" }, { text: "你有没有什么奇怪的习惯？你觉得它奇怪吗？" },
+        { text: "你最喜欢的一种颜色是什么？它代表了什么？" }, { text: "你认为世界上最奇怪的发明是什么？为什么？" }, { text: "如果你能拥有一个超能力，你会选择什么？你会用它做什么？" },
+        { text: "你最喜欢的一句口头禅是什么？它有什么特别的含义吗？" }, { text: "如果你能变成任何物品，你会变成什么？你希望被放在哪里？" }, { text: "你有没有什么奇怪的梦境？你觉得它有什么寓意吗？" },
+        { text: "你最喜欢的一种声音是什么？它能让你放松吗？" }, { text: "你有没有什么奇怪的癖好？你愿意分享吗？" }, { text: "你最喜欢的一种味道是什么？它能勾起你的回忆吗？" },
+        { text: "你有没有什么奇怪的信仰？它对你的生活有什么影响？" }, { text: "你最喜欢的一种触感是什么？它能让你感到舒适吗？" }, { text: "你有没有什么奇怪的恐惧？你如何面对它？" },
+        { text: "你最喜欢的一种气味是什么？它能让你感到愉悦吗？" }, { text: "你有没有什么奇怪的收藏？你收集了什么？" },
+        { text: "你最喜欢哪种类型的笑话？你认为幽默的本质是什么？" }, { text: "你有没有什么让你感到困惑的谜题？你尝试过解开它吗？" }, { text: "你最喜欢哪种类型的鬼故事？你相信鬼魂存在吗？" },
+        { text: "你有没有什么让你感到好奇的未解之谜？你希望它被揭开谜底吗？" }, { text: "你最喜欢哪种类型的冷知识？你有没有因此而感到惊讶？" }, { text: "你有没有什么让你感到惊讶的发现？它改变了你的看法吗？" },
+        { text: "你最喜欢哪种类型的都市传说？你相信它们是真的吗？" }, { text: "你有没有什么让你感到有趣的悖论？你如何理解它？" }, { text: "你最喜欢哪种类型的脑筋急转弯？你擅长解决它们吗？" },
+        { text: "你有没有什么让你感到奇怪的巧合？你认为它们是偶然还是必然？" }, { text: "如果你能给一个物体赋予生命，你会选择什么？它会变成什么样？" }, { text: "你有没有一个让你感到非常不可思议的经历？你如何解释它？" },
+        { text: "你最喜欢哪种类型的童话故事？它给你带来了什么？" }, { text: "你有没有一个让你感到非常有趣的观察？你从中发现了什么？" }, { text: "你最喜欢哪种类型的神话传说？它对你有什么启发？" },
+        { text: "你有没有一个让你感到非常奇怪的梦境？你觉得它有什么象征意义吗？" }, { text: "你最喜欢哪种类型的科幻小说？它让你对未来有什么期待？" }, { text: "你有没有一个让你感到非常好奇的现象？你希望了解它的原理吗？" },
+        { text: "你最喜欢哪种类型的奇幻故事？它让你沉浸在哪里？" }, { text: "你有没有一个让你感到非常有趣的理论？你认为它有什么应用价值？" }, { text: "你最喜欢哪种类型的历史事件？它对你有什么影响？" },
+        { text: "你有没有一个让你感到非常奇怪的发现？它改变了你的认知吗？" }, { text: "你最喜欢哪种类型的哲学思想？它让你思考什么？" }, { text: "你有没有一个让你感到非常有趣的问题？你希望找到答案吗？" },
+        { text: "你最喜欢哪种类型的心理学现象？它让你对人性有什么理解？" }, { text: "你有没有一个让你感到非常奇怪的观点？你如何看待它？" }, { text: "你最喜欢哪种类型的社会现象？它让你对社会有什么看法？" },
+        { text: "你有没有一个让你感到非常有趣的假设？你希望它被验证吗？" }, { text: "你最喜欢哪种类型的自然现象？它让你感到敬畏吗？" }, { text: "你有没有一个让你感到非常奇怪的习惯？它对你的生活有什么影响？" },
+        { text: "你最喜欢哪种类型的文化习俗？它让你感到新奇吗？" }, { text: "你有没有一个让你感到非常有趣的观察？你从中获得了什么？" }, { text: "你最喜欢哪种类型的科学发现？它让你感到兴奋吗？" }
+      ],
+      quirky_pro:[
+        { text: "给一条金鱼写墓志铭会写什么？你希望它被记住什么？" }, { text: "如果世界颜色消失你选留哪一种？为什么？" }, { text: "设计一个没人买的发明。它的功能是什么？" },
+        { text: "如果你能回到过去改变一件事，你会改变什么？它会对现在产生什么影响？" }, { text: "你认为外星人存在吗？为什么？你希望与他们接触吗？" }, { text: "如果你能和历史上的任何人物共进晚餐，你会选择谁？你会问他什么？" },
+        { text: "你对梦境有什么看法？你认为它们是潜意识的反映还是随机的？" }, { text: "如果你能写一本关于自己的书，书名会是什么？它会讲述一个怎样的故事？" }, { text: "你认为人类最大的优点和缺点是什么？它们如何影响人类文明？" },
+        { text: "如果你能发明一种新的节日，你会发明什么？它的庆祝方式是怎样的？" }, { text: "如果你能创造一个新物种，你会创造什么？它有什么特殊能力？" }, { text: "你认为世界上最奇怪的理论是什么？你相信它吗？" },
+        { text: "如果你能选择任何一个时代生活，你会选择哪个时代？为什么？" }, { text: "你对人工智能的未来有何看法？它会取代人类还是成为人类的伙伴？" }, { text: "如果你能和未来的自己对话，你会问什么？你会给自己什么建议？" },
+        { text: "你认为什么是真正的幸福？它是一种主观感受还是客观标准？" }, { text: "你对宇宙的起源有何看法？你相信大爆炸理论还是其他？" }, { text: "如果你能改变一项物理定律，你会改变什么？它会对宇宙产生什么影响？" },
+        { text: "你认为世界上最神秘的现象是什么？你希望它被揭开谜底吗？" }, { text: "如果你能创造一个全新的世界，你会创造一个怎样的世界？它的规则和价值观是什么？" },
+        { text: "你认为什么是真正的荒谬？你如何在荒谬中寻找意义？" }, { text: "你有没有什么让你感到不安的哲学问题？你如何面对它？" }, { text: "你认为什么是真正的自由意志？它是否存在？" },
+        { text: "你有没有什么让你感到困惑的道德困境？你如何做出选择？" }, { text: "你认为什么是真正的美？它是一种客观存在还是主观感受？" }, { text: "你有没有什么让你感到绝望的现实？你如何应对它？" },
+        { text: "你认为什么是真正的真理？它是否存在？" }, { text: "你有没有什么让你感到恐惧的未来？你如何应对这种恐惧？" }, { text: "你认为什么是真正的爱？它是一种情感还是一种选择？" },
+        { text: "你有没有什么让你感到奇怪的哲学思想？你如何理解它？" }, { text: "如果你发现自己是世界末日后的唯一幸存者，你会怎么做？你会重建文明吗？" }, { text: "你认为人类的意识可能被上传到计算机吗？你希望它发生吗？" },
+        { text: "如果你能和任何已故的哲学家对话，你会问他什么？你希望从他那里获得什么？" }, { text: "你认为平行宇宙存在吗？你希望去探索它们吗？" }, { text: "如果你的记忆可以被随意编辑，你会选择编辑掉什么？它会对你产生什么影响？" },
+        { text: "你有没有一个让你感到非常离奇的经历？你如何解释它？" }, { text: "你认为人类的终极命运是什么？是毁灭、进化还是永恒？" }, { text: "如果你能改变人类历史上的一件大事，你会改变什么？它会对现在产生什么影响？" },
+        { text: "你对“缸中之脑”的假说有什么看法？你认为我们是真实存在的吗？" }, { text: "你认为我们所生活的世界是一个模拟吗？你希望它被揭示吗？" }, { text: "如果你能和时间对话，你会问它什么？你希望了解什么？" },
+        { text: "你有没有一个让你感到非常超现实的梦境？你觉得它有什么寓意吗？" }, { text: "你认为什么是人类最深层的恐惧？它如何影响人类行为？" }, { text: "如果你能拥有任何一件科幻电影中的道具，你会选择什么？你会用它做什么？" },
+        { text: "你对“永生”的看法是什么？你希望永生吗？" }, { text: "你认为人类最终会进化成什么样子？它会带来积极还是消极的影响？" }, { text: "如果你能和外星生命对话，你会说什么？你希望了解什么？" },
+        { text: "你有没有一个让你感到非常诡异的巧合？你认为它们是偶然还是必然？" }, { text: "你认为什么是人类最伟大的发明？它如何改变人类文明？" }, { text: "如果你能创造一个属于自己的哲学体系，你会创造一个怎样的体系？它的核心思想是什么？" },
+        { text: "你有没有一个让你感到非常烧脑的问题？你希望找到答案吗？" }, { text: "你认为人类存在的目的是什么？它对你有什么意义？" }, { text: "如果你能和宇宙对话，你会问它什么？你希望了解什么？" },
+        { text: "你有没有一个让你感到非常不可思议的理论？你相信它吗？" }, { text: "你认为什么是人类最深层的渴望？它如何驱动人类前进？" }, { text: "如果你能拥有任何一种超能力，你会选择什么？你会用它做什么？" },
+        { text: "你有没有一个让你感到非常奇怪的现象？你希望了解它的原理吗？" }, { text: "你认为人类最应该探索的领域是什么？它会带来什么？" }, { text: "如果你能和死神对话，你会说什么？你希望了解什么？" },
+        { text: "你有没有一个让你感到非常困惑的哲学思辨？你如何解决它？" }, { text: "你认为人类最终会走向何方？它会带来积极还是消极的影响？" },
+        { text: "你有没有过一个让你感到非常奇怪的预感？它最终实现了吗？" }, { text: "你最想对一个外星生物问什么问题？你希望从它那里获得什么？" }, { text: "如果你能与任何一种动物的心灵相通，你会选择哪种？你会和它聊些什么？" },
+        { text: "你有没有一个让你感到非常有趣的悖论？你如何理解它？" }, { text: "你认为什么是人类社会最普遍的谬误？你如何看待它？" }, { text: "你有没有一个让你感到非常奇怪的艺术形式？你如何欣赏它？" },
+        { text: "你最想知道宇宙的哪个秘密？你认为它会改变什么？" }, { text: "你有没有一个让你感到非常令人不安的理论？你如何应对它？" }, { text: "如果你能改变人类基因组的一个特性，你会改变什么？它会对人类产生什么影响？" },
+        { text: "你对未来的人类进化有何看法？它会带来积极还是消极的影响？" }, { text: "你有没有一个让你感到非常奇怪的梦想？你觉得它有什么寓意吗？" }, { text: "你认为什么是真正的疯狂？它是一种疾病还是一种状态？" },
+        { text: "你有没有一个让你感到非常有趣的思维实验？你如何解决它？" }, { text: "你最想和哪个已故的科学家讨论他的理论？你希望从他那里获得什么？" }, { text: "如果你能创造一个新的颜色，你会创造什么？它会是什么样的？" },
+        { text: "你对“平行宇宙”的理解是什么？你相信它们存在吗？" }, { text: "你有没有一个让你感到非常奇怪的习惯？你如何看待它？" }, { text: "你认为人类的集体意识存在吗？它如何影响人类行为？" },
+        { text: "你有没有一个让你感到非常有趣的发明？你希望它被实现吗？" }, { text: "你最想体验哪种不同的人生？它会给你带来什么？" }, { text: "你有没有一个让你感到非常奇怪的文化现象？你如何理解它？" },
+        { text: "你认为人类存在的目的是什么？它对你有什么意义？" }, { text: "你有没有一个让你感到非常有趣的观察？你从中发现了什么？" }, { text: "你最想探索的未解之谜是什么？你希望它被揭开谜底吗？" },
+        { text: "你有没有一个让你感到非常奇怪的逻辑问题？你如何解决它？" }, { text: "你认为人类最应该思考的问题是什么？它会带来什么？" }, { text: "你有没有一个让你感到非常有趣的科幻场景？你希望它实现吗？" },
+        { text: "你最想了解哪种超自然现象？你相信它们存在吗？" }, { text: "你有没有一个让你感到非常奇怪的社会现象？你如何看待它？" }, { text: "你认为人类最伟大的成就和最大的失败分别是什么？它们如何影响人类文明？" }
+      ],
+    };
+
+    // Map: Dice points -> Question bank key + label
+    const diceMap={
+      1:{key:'emotional_basic',label:'情感问题 · Basic'},
+      4:{key:'emotional_pro',label:'情感问题 · Pro'},
+      2:{key:'hobby_basic',label:'兴趣爱好 · Basic'},
+      5:{key:'hobby_pro',label:'兴趣爱好 · Pro'},
+      3:{key:'quirky_basic',label:'古怪问题 · Basic'},
+      6:{key:'quirky_pro',label:'古怪问题 · Pro'},
+    };
+
+    // Default player list and avatars
+    const defaultPlayers = [
+      { name: 'Alex', avatar: 'https://placehold.co/60x60/FFD700/000?text=A', deletable: false },
+      { name: 'Joyce', avatar: 'https://placehold.co/60x60/90EE90/000?text=J', deletable: false },
+      { name: 'Rachel', avatar: 'https://placehold.co/60x60/ADD8E6/000?text=R', deletable: false },
+      { name: 'Sanchez', avatar: 'https://placehold.co/60x60/DDA0DD/000?text=S', deletable: false }
+    ];
+    let currentPlayers = [...defaultPlayers]; // Current list of selectable players
+
+    // Store all history records
+    const historyRecords = []; // Stores { id, player, question, answer, status, date, time, lotteryResult }
+
+    // ===== DOM References =====
+    const playerSelectionContainer = document.getElementById('playerSelectionContainer');
+    const playerSelection = document.getElementById('playerSelection');
+    const addPlayerMessage = document.getElementById('addPlayerMessage');
+    const randomSelectPlayerBtn = document.getElementById('randomSelectPlayerBtn');
+
+    const rollBtn=document.getElementById('rollBtn');
+    const diceFace=document.getElementById('dice-face');
+    const diceResult=document.getElementById('dice-result');
+    const manualDiceInputGroup = document.getElementById('manualDiceInputGroup');
+    const manualDiceInput = document.getElementById('manualDiceInput');
+    const useManualDiceBtn = document.getElementById('useManualDiceBtn');
+    const diceMapInfoIcon = document.getElementById('diceMapInfoIcon');
+    const diceMapModal = document.getElementById('diceMapModal');
+    const diceMapList = document.getElementById('diceMapList');
+    const closeDiceMapModalBtn = document.getElementById('closeDiceMapModalBtn');
+
+    const questionScroller=document.getElementById('questionScroller');
+    const questionTypeDisplay = document.getElementById('questionTypeDisplay');
+    const scrollingQuestionWrapper = document.getElementById('scrollingQuestionWrapper');
+    const scrollingQuestion1 = document.getElementById('scrollingQuestion1');
+    const scrollingQuestion2 = document.getElementById('scrollingQuestion2');
+    let activeQuestionElement = scrollingQuestion1;
+    let inactiveQuestionElement = scrollingQuestion2;
+
+    const startStopScrollBtn=document.getElementById('startStopScrollBtn');
+    const selectQuestionBtn=document.getElementById('selectQuestionBtn');
+    const historyDiv=document.getElementById('history');
+
+    const filterPlayerSelect = document.getElementById('filterPlayer');
+    const filterDateSelect = document.getElementById('filterDate');
+    const filterStatusSelect = document.getElementById('filterStatus');
+
+    const questionModal=document.getElementById('questionModal');
+    const modalQuestion=document.getElementById('modalQuestion');
+    const answerForm=document.getElementById('answerForm');
+    const answererDisplay = document.getElementById('answererDisplay');
+    const willAnswerButtons = document.getElementById('willAnswerButtons');
+    let willAnswerValue = '';
+    const answerFieldGroup = document.getElementById('answerFieldGroup');
+    const noAnswerOptions = document.getElementById('noAnswerOptions');
+    const penaltyOptionsContainer = document.getElementById('penaltyOptionsContainer');
+    let selectedPenalty = '';
+    const closeModalBtn=document.getElementById('closeModal');
+
+    const designateModal = document.getElementById('designateModal');
+    const designateMessage = document.getElementById('designateMessage');
+    const designatePlayerList = document.getElementById('designatePlayerList');
+
+    const lotteryResultModal = document.getElementById('lotteryResultModal');
+    const lotteryMessage = document.getElementById('lotteryMessage');
+    const closeLotteryModalBtn = document.getElementById('closeLotteryModalBtn');
+
+    const newPlayerModal = document.getElementById('newPlayerModal');
+    const newPlayerNameInput = document.getElementById('newPlayerNameInput');
+    const newPlayerModalMessage = document.getElementById('newPlayerModalMessage');
+    const confirmAddPlayerBtn = document.getElementById('confirmAddPlayerBtn');
+    const cancelAddPlayerBtn = document.getElementById('cancelAddPlayerBtn');
+
+    // ===== Game State Variables =====
+    let scrollingInterval = null;
+    let currentQuestionIndex = 0;
+    let currentQuestionList = [];
+    let isScrolling = false;
+    let selectedRoller = null;
+    let currentSelectedQuestion = null;
+    let questionScrollState = 0; 
+
+    const personQuestionHistory = new Map(); 
+    const playerRewards = new Map(); 
+    let pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
+    let pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
+
+    let longPressTimer;
+    const LONG_PRESS_THRESHOLD = 1000; 
+
+    // ===== Initialization Functions =====
+    function initializePlayers() {
+      renderPlayerCards();
+      currentPlayers.forEach(player => {
+        playerRewards.set(player.name, { skipAnswer: false, designateAnswerer: false, manualDiceEnabled: false });
+      });
+      populatePlayerFilter(); 
+      renderHistory(); 
+      populateDiceMapModal(); 
+    }
+
+    function renderPlayerCards() {
+      playerSelection.innerHTML = ''; 
+      currentPlayers.forEach(player => {
+        const playerCard = document.createElement('div');
+        playerCard.classList.add('player-card');
+        playerCard.dataset.name = player.name; 
+
+        const img = document.createElement('img');
+        img.src = player.avatar;
+        img.alt = player.name;
+        img.onerror = function() {
+            this.onerror=null; 
+            this.src='https://placehold.co/60x60/CCCCCC/000?text=User';
+        };
+
+        const span = document.createElement('span');
+        span.textContent = player.name;
+
+        playerCard.appendChild(img);
+        playerCard.appendChild(span);
+
+        if (player.deletable !== false) { 
+            playerCard.addEventListener('mousedown', (e) => {
+                if (e.button === 0) { 
+                    longPressTimer = setTimeout(() => {
+                        deletePlayer(player.name);
+                        longPressTimer = null; 
+                    }, LONG_PRESS_THRESHOLD);
+                }
+            });
+            playerCard.addEventListener('mouseup', () => {
+                if (longPressTimer) { 
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                    selectPlayer(player.name);
+                }
+            });
+            playerCard.addEventListener('mouseleave', () => { 
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            });
+            playerCard.addEventListener('touchstart', (e) => {
+                longPressTimer = setTimeout(() => {
+                    deletePlayer(player.name);
+                    longPressTimer = null;
+                }, LONG_PRESS_THRESHOLD);
+            }, { passive: true }); 
+            playerCard.addEventListener('touchend', () => {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                    selectPlayer(player.name);
+                }
+            });
+            playerCard.addEventListener('touchcancel', () => { 
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            });
+        } else {
+            playerCard.addEventListener('click', () => {
+                selectPlayer(player.name);
+            });
+        }
+        playerSelection.appendChild(playerCard);
+      });
+
+      const addPlayerCard = document.createElement('div');
+      addPlayerCard.id = 'addPlayerCard';
+      addPlayerCard.classList.add('player-card');
+      addPlayerCard.innerHTML = '<span class="plus-icon">+</span>';
+      addPlayerCard.addEventListener('click', () => {
+        newPlayerNameInput.value = ''; 
+        newPlayerModalMessage.textContent = ''; 
+        newPlayerModal.style.display = 'flex';
+        newPlayerNameInput.focus(); 
+      });
+      playerSelection.appendChild(addPlayerCard);
+
+      if (selectedRoller) {
+        const currentSelectedCard = document.querySelector(`.player-card[data-name="${selectedRoller.name}"]`);
+        if (currentSelectedCard) {
+          currentSelectedCard.classList.add('selected');
+        } else {
+          selectedRoller = null;
+          rollBtn.disabled = true;
+        }
+      } else {
+        rollBtn.disabled = true; 
+      }
+    }
+
+    function selectPlayer(name) {
+      document.querySelectorAll('.player-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+
+      const selectedCard = document.querySelector(`.player-card[data-name="${name}"]`);
+      if (selectedCard) {
+        selectedCard.classList.add('selected');
+        gsap.fromTo(selectedCard, {scale: 1}, {scale: 1.05, duration: 0.1, yoyo: true, repeat: 1});
+      }
+
+      selectedRoller = currentPlayers.find(p => p.name === name);
+      rollBtn.disabled = false; 
+
+      updateManualDiceInputState(); 
+    }
+
+    function deletePlayer(nameToDelete) {
+      const playerToDelete = currentPlayers.find(p => p.name === nameToDelete);
+      if (playerToDelete && playerToDelete.deletable === false) {
+        alert('此玩家不能被删除。'); 
+        return;
+      }
+
+      if (confirm(`确定要删除玩家 "${nameToDelete}" 吗？`)) {
+        currentPlayers = currentPlayers.filter(p => p.name !== nameToDelete);
+        personQuestionHistory.delete(nameToDelete);
+        playerRewards.delete(nameToDelete);
+        renderPlayerCards(); 
+        populatePlayerFilter(); 
+
+        const initialLength = historyRecords.length;
+        for (let i = initialLength - 1; i >= 0; i--) {
+            if (historyRecords[i].player === nameToDelete) {
+                historyRecords.splice(i, 1);
+            }
+        }
+        renderHistory(); 
+
+        if (selectedRoller && selectedRoller.name === nameToDelete) {
+          selectedRoller = null;
+          rollBtn.disabled = true;
+        }
+        if (pendingDesignationForNextRoll.active && pendingDesignationForNextRoll.designatedBy === nameToDelete) {
+            pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
+            designateModal.style.display = 'none';
+        }
+        if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy === nameToDelete) {
+            pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
+            designateModal.style.display = 'none';
+        }
+      }
+    }
+
+    function updateManualDiceInputState() {
+        if (selectedRoller && playerRewards.has(selectedRoller.name) && playerRewards.get(selectedRoller.name).manualDiceEnabled) {
+            manualDiceInput.disabled = false;
+            useManualDiceBtn.disabled = false;
+            manualDiceInput.placeholder = "手动输入点数 (奖励)";
+        } else {
+            manualDiceInput.disabled = true;
+            useManualDiceBtn.disabled = true;
+            manualDiceInput.placeholder = "手动输入点数";
+        }
+    }
+
+    // ===== Event Listeners =====
+    confirmAddPlayerBtn.addEventListener('click', () => {
+        const newName = newPlayerNameInput.value.trim();
+        if (newName) {
+            if (currentPlayers.some(p => p.name === newName)) {
+                newPlayerModalMessage.textContent = '该玩家已存在！';
+                newPlayerModalMessage.style.color = 'orange';
+            } else {
+                const newPlayer = { name: newName, avatar: `https://placehold.co/60x60/FFB6C1/000?text=${newName.charAt(0).toUpperCase()}`, deletable: true };
+                currentPlayers.push(newPlayer);
+                playerRewards.set(newName, { skipAnswer: false, designateAnswerer: false, manualDiceEnabled: false });
+                renderPlayerCards(); 
+                populatePlayerFilter(); 
+
+                addPlayerMessage.textContent = `玩家 "${newName}" 已添加！`;
+                addPlayerMessage.style.color = 'green';
+                addPlayerMessage.classList.remove('hidden');
+                gsap.fromTo(addPlayerMessage, {opacity: 0, y: 10}, {opacity: 1, y: 0, duration: 0.3, onComplete: () => {
+                    gsap.to(addPlayerMessage, {opacity: 0, y: -10, delay: 2, duration: 0.5, onComplete: () => addPlayerMessage.classList.add('hidden')});
+                }});
+                newPlayerModal.style.display = 'none'; 
+            }
+        } else {
+            newPlayerModalMessage.textContent = '玩家名字不能为空！';
+            newPlayerModalMessage.style.color = 'red';
+        }
+    });
+
+    cancelAddPlayerBtn.addEventListener('click', () => {
+        newPlayerModal.style.display = 'none';
+    });
+
+    // --- SIMPLIFIED Random Player Selection ---
+    randomSelectPlayerBtn.addEventListener('click', () => {
+      if (currentPlayers.length === 0) {
+        alert('没有可选择的玩家！');
+        return;
+      }
+
+      let availablePlayersForRandom = [...currentPlayers];
+      // If a player is already selected, try to pick a different player
+      if (selectedRoller && currentPlayers.length > 1) {
+        availablePlayersForRandom = currentPlayers.filter(p => p.name !== selectedRoller.name);
+        // If filtering results in an empty list (e.g., only one player total and they are selected),
+        // then just re-select that one player or do nothing. For simplicity, we'll allow re-selection if only one other option.
+        if (availablePlayersForRandom.length === 0) {
+            availablePlayersForRandom = [...currentPlayers]; // Fallback to all players
+        }
+      }
+      
+      if (availablePlayersForRandom.length === 0) { // Should only happen if currentPlayers itself is empty
+          alert('没有可供随机选择的玩家！');
+          return;
+      }
+
+      const randomIndex = Math.floor(Math.random() * availablePlayersForRandom.length);
+      const randomlySelectedPlayer = availablePlayersForRandom[randomIndex];
+
+      selectPlayer(randomlySelectedPlayer.name); // Select the player
+
+      // Scroll the selected player into view
+      const newlySelectedCard = playerSelection.querySelector(`.player-card.selected[data-name="${randomlySelectedPlayer.name}"]`);
+      if (newlySelectedCard) {
+            gsap.to(playerSelection, {
+                scrollLeft: newlySelectedCard.offsetLeft - (playerSelection.clientWidth / 2) + (newlySelectedCard.offsetWidth / 2),
+                duration: 0.5, // Smooth scroll
+                ease: "power2.out"
+            });
+      }
+      rollBtn.disabled = false; // Ensure roll button is enabled
+    });
+
+
+    rollBtn.addEventListener('click',async()=>{
+      if (!selectedRoller) {
+        alert('请先选择掷骰子的人！');
+        return;
+      }
+      if (pendingImmediateDesignation.active) {
+          pendingImmediateDesignation.originalRoller = selectedRoller; 
+          await showDesignateModal(true); 
+          if (!selectedRoller || pendingImmediateDesignation.active) { 
+              pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null }; 
+              return; 
+          }
+      }
+      await performDiceRoll();
+    });
+
+    useManualDiceBtn.addEventListener('click', async () => {
+      if (!selectedRoller) {
+        alert('请先选择掷骰子的人！');
+        return;
+      }
+      if (pendingImmediateDesignation.active) {
+          pendingImmediateDesignation.originalRoller = selectedRoller;
+          await showDesignateModal(true);
+          if (!selectedRoller || pendingImmediateDesignation.active) {
+              pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
+              return;
+          }
+      }
+
+      const manualPoints = parseInt(manualDiceInput.value, 10);
+      if (isNaN(manualPoints) || manualPoints < 1 || manualPoints > 6) {
+        alert('请输入1到6之间的有效点数！');
+        return;
+      }
+      await performDiceRoll(manualPoints);
+    });
+
+    async function performDiceRoll(manualPoints = null) {
+      rollBtn.disabled = true;
+      useManualDiceBtn.disabled = true;
+      manualDiceInput.disabled = true;
+      playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'none'); 
+
+      if (pendingDesignationForNextRoll.active) {
+        await showDesignateModal(false); 
+        if (!selectedRoller || pendingDesignationForNextRoll.active) { 
+            selectedRoller = pendingDesignationForNextRoll.originalRoller; 
+            pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null }; 
+            rollBtn.disabled = false;
+            updateManualDiceInputState();
+            playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'auto');
+            return; 
+        }
+      }
+
+      let points;
+      if (manualPoints !== null) {
+        points = manualPoints;
+        gsap.to(diceFace, {duration: 0.1, scale: 1.2, yoyo: true, repeat: 1, ease: "power1.out"});
+        await new Promise(r=>setTimeout(r, 200)); 
+        diceFace.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][points-1];
+        if (selectedRoller && playerRewards.has(selectedRoller.name) && playerRewards.get(selectedRoller.name).manualDiceEnabled) {
+            playerRewards.get(selectedRoller.name).manualDiceEnabled = false;
+            console.log(`${selectedRoller.name} 的手动骰子奖励已消耗。`);
+            updateManualDiceInputState(); 
+        }
+      } else {
+        const diceChars=['⚀','⚁','⚂','⚃','⚄','⚅'];
+        let loops=12; 
+        const interval=setInterval(()=>{
+          diceFace.textContent=diceChars[Math.floor(Math.random()*6)];
+          gsap.to(diceFace, {duration: 0.1, scale: 1.2, yoyo: true, repeat: 1, ease: "power1.out"}); 
+          if(--loops===0) clearInterval(interval);
+        },80); 
+        await new Promise(r=>setTimeout(r,loops*80+60)); 
+        points=Math.floor(Math.random()*6)+1; 
+        diceFace.textContent=diceChars[points-1];
+      }
+      
+      diceResult.textContent=`${selectedRoller.name}掷出了：${points} 点`;
+
+      const finalAnswerer = selectedRoller; 
+
+      prepareQuestionScroller(points, finalAnswerer.name);
+      rollBtn.disabled=false;
+      updateManualDiceInputState();
+      playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'auto');
+    }
+
+
+    function prepareQuestionScroller(points, rollerName){
+      const map=diceMap[points]; 
+      const allQuestions = questionBank[map.key].map(q => ({...q})); 
+
+      const history = personQuestionHistory.get(rollerName) || [];
+      const filteredQuestions = allQuestions.filter(q => !history.includes(q.text));
+
+      if (filteredQuestions.length === 0 || filteredQuestions.length < 5) { 
+        currentQuestionList = allQuestions; 
+        console.warn(`为 ${rollerName} 抽题时，可用新问题不足，将从所有问题中抽取。`);
+      } else {
+        currentQuestionList = filteredQuestions;
+      }
+      
+      for (let i = currentQuestionList.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [currentQuestionList[i], currentQuestionList[j]] = [currentQuestionList[j], currentQuestionList[i]];
+      }
+
+      currentQuestionIndex = 0;
+      questionScrollState = 0; 
+
+      if (scrollingInterval) {
+        clearInterval(scrollingInterval);
+        scrollingInterval = null;
+      }
+      isScrolling = false;
+      startStopScrollBtn.textContent = '开始滚动';
+      startStopScrollBtn.disabled = false;
+      selectQuestionBtn.disabled = true;
+
+      questionTypeDisplay.textContent = map.label; 
+
+      scrollingQuestion1.textContent = currentQuestionList[currentQuestionIndex].text;
+      scrollingQuestion1.style.opacity = 1;
+      gsap.set(scrollingQuestion1, { y: '0%' }); 
+      scrollingQuestion2.textContent = currentQuestionList[(currentQuestionIndex + 1) % currentQuestionList.length].text;
+      scrollingQuestion2.style.opacity = 0;
+      gsap.set(scrollingQuestion2, { y: '100%' }); 
+
+      activeQuestionElement = scrollingQuestion1;
+      inactiveQuestionElement = scrollingQuestion2;
+
+      questionScroller.classList.remove('hidden'); 
+    }
+
+    // ===== Scrolling Control =====
+    startStopScrollBtn.addEventListener('click',()=>{
+      if (isScrolling) { 
+        clearInterval(scrollingInterval);
+        scrollingInterval = null;
+        isScrolling = false;
+        
+        if (questionScrollState === 1) { 
+            questionScrollState = 2;
+            startStopScrollBtn.textContent = '继续滚动';
+        } else if (questionScrollState === 3) { 
+            questionScrollState = 0; 
+            startStopScrollBtn.textContent = '选择问题'; 
+            startStopScrollBtn.disabled = true; 
+        }
+        selectQuestionBtn.disabled = false; 
+      } else { 
+        if (questionScrollState === 0 && startStopScrollBtn.textContent === '选择问题') {
+            return; 
+        }
+        
+        isScrolling = true;
+        startStopScrollBtn.textContent = '暂停滚动';
+        selectQuestionBtn.disabled = true; 
+
+        if (questionScrollState === 0) { 
+            questionScrollState = 1;
+        } else if (questionScrollState === 2) { 
+            questionScrollState = 3;
+        }
+        
+        scrollingInterval = setInterval(() => {
+            gsap.to(activeQuestionElement, {
+                duration: 0.2, 
+                opacity: 0,
+                y: -scrollingQuestionWrapper.offsetHeight,
+                ease: "power1.out",
+                onComplete: () => {
+                    currentQuestionIndex = (currentQuestionIndex + 1) % currentQuestionList.length;
+                    inactiveQuestionElement.textContent = currentQuestionList[currentQuestionIndex].text;
+                    gsap.set(inactiveQuestionElement, {y: scrollingQuestionWrapper.offsetHeight, opacity: 0});
+
+
+                    let temp = activeQuestionElement;
+                    activeQuestionElement = inactiveQuestionElement;
+                    inactiveQuestionElement = temp;
+
+                    gsap.to(activeQuestionElement, {
+                        duration: 0.2, 
+                        opacity: 1,
+                        y: 0,
+                        ease: "power1.in"
+                    });
+                }
+            });
+        }, 200); 
+      }
+    });
+
+    selectQuestionBtn.addEventListener('click', () => {
+      if (!isScrolling) {
+        currentSelectedQuestion = currentQuestionList[currentQuestionIndex];
+        showQuestionModal(currentSelectedQuestion.text);
+        
+        questionScroller.classList.add('hidden');
+        scrollingQuestion1.textContent = '';
+        scrollingQuestion2.textContent = '';
+        questionTypeDisplay.textContent = '';
+      }
+    });
+
+    function addQuestionToHistory(personName, questionText) {
+        let history = personQuestionHistory.get(personName) || [];
+        if (!history.includes(questionText)) {
+            history.push(questionText);
+            if (history.length > 20) { // Keep a longer history to avoid quick repeats
+                history.shift();
+            }
+            personQuestionHistory.set(personName, history);
+            console.log(`${personName} 的问题历史:`, personQuestionHistory.get(personName));
+        }
+    }
+
+    // ===== Question + Answer Modal Logic =====
+    function showQuestionModal(qText){
+      modalQuestion.textContent=qText;
+      questionModal.style.display='flex';
+      
+      answerForm.reset();
+      answerFieldGroup.classList.add('hidden');
+      noAnswerOptions.classList.add('hidden');
+      selectedPenalty = '';
+      
+      willAnswerButtons.querySelectorAll('.will-answer-btn').forEach(btn => btn.classList.remove('selected'));
+      willAnswerValue = '';
+
+      answererDisplay.textContent = selectedRoller ? selectedRoller.name : '未知玩家';
+
+      renderPenaltyOptions();
+    }
+
+    function renderPenaltyOptions() {
+        penaltyOptionsContainer.innerHTML = '';
+        const penaltyOptions = [
+            { value: 'skip', text: '跳过 (需奖励)' },
+            { value: 'penalty_drink', text: '罚酒' },
+            { value: 'no_phone', text: '三十分钟不可以看手机' }
+        ];
+
+        penaltyOptions.forEach(option => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.classList.add('penalty-option-btn');
+            button.dataset.value = option.value;
+            button.textContent = option.text;
+
+            if (option.value === 'skip') {
+                if (selectedRoller && playerRewards.has(selectedRoller.name) && playerRewards.get(selectedRoller.name).skipAnswer) {
+                    button.classList.remove('disabled');
+                    button.disabled = false;
+                    button.textContent = '跳过 (已获得奖励)';
+                } else {
+                    button.classList.add('disabled');
+                    button.disabled = true;
+                }
+            }
+
+            button.addEventListener('click', () => {
+                penaltyOptionsContainer.querySelectorAll('.penalty-option-btn').forEach(btn => btn.classList.remove('selected'));
+                button.classList.add('selected');
+                selectedPenalty = button.dataset.value;
+            });
+            penaltyOptionsContainer.appendChild(button);
+        });
+    }
+
+    willAnswerButtons.addEventListener('click', (e) => {
+        if (e.target.classList.contains('will-answer-btn')) {
+            willAnswerButtons.querySelectorAll('.will-answer-btn').forEach(btn => btn.classList.remove('selected'));
+            e.target.classList.add('selected');
+            willAnswerValue = e.target.dataset.value;
+
+            if (willAnswerValue === 'Yes') {
+                answerFieldGroup.classList.remove('hidden');
+                noAnswerOptions.classList.add('hidden');
+                selectedPenalty = '';
+            } else if (willAnswerValue === 'No') {
+                answerFieldGroup.classList.add('hidden');
+                noAnswerOptions.classList.remove('hidden');
+                renderPenaltyOptions();
+            }
+        }
+    });
+
+    closeModalBtn.addEventListener('click',()=>{
+      questionModal.style.display='none';
+      answerForm.reset();
+    });
+
+    answerForm.addEventListener('submit',e=>{
+      e.preventDefault();
+      const who = selectedRoller.name;
+      let ans = '';
+      let lotteryResultText = '';
+      let answerStatus = '';
+
+      if (willAnswerValue === 'Yes') {
+        ans = answerForm.answer.value.trim();
+        if (!ans) {
+            alert('请输入回答内容！');
+            return;
+        }
+        answerStatus = 'answered';
+      } else if (willAnswerValue === 'No') {
+        if (!selectedPenalty) {
+            alert('请选择一项惩罚！');
+            return;
+        }
+        if (selectedPenalty === 'skip') {
+            ans = '跳过作答';
+            answerStatus = 'skipped';
+            if (selectedRoller && playerRewards.has(selectedRoller.name) && playerRewards.get(selectedRoller.name).skipAnswer) {
+                playerRewards.get(selectedRoller.name).skipAnswer = false; // Consume reward
+                console.log(`${selectedRoller.name} 的跳过奖励已消耗。`);
+            }
+        } else if (selectedPenalty === 'penalty_drink') {
+            ans = '罚酒';
+            answerStatus = 'penalized';
+        } else if (selectedPenalty === 'no_phone') {
+            ans = '三十分钟不可以看手机';
+            answerStatus = 'penalized';
+        }
+      } else {
+          alert('请选择是否作答！');
+          return;
+      }
+
+      addQuestionToHistory(who, currentSelectedQuestion.text);
+
+      const now = new Date();
+      const formattedDate = `${String(now.getFullYear())}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const formattedTime = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }); // Use Chinese locale for time
+
+      // Perform lottery only if answered or skipped with reward
+      if (willAnswerValue === 'Yes' || (willAnswerValue === 'No' && selectedPenalty === 'skip')) {
+          lotteryResultText = performLottery(who);
+      } else {
+          console.log("玩家选择了惩罚，不进行抽奖。");
+          lotteryResultText = "未抽奖 (选择了惩罚)";
+      }
+
+      historyRecords.push({
+          id: Date.now(),
+          player: who,
+          question: modalQuestion.textContent,
+          answer: ans,
+          status: answerStatus,
+          date: formattedDate,
+          time: formattedTime,
+          lotteryResult: lotteryResultText
+      });
+      renderHistory();
+
+      questionModal.style.display='none';
+      answerForm.reset();
+
+      // Check for "designateAnswerer" reward
+      if (playerRewards.has(who) && playerRewards.get(who).designateAnswerer) {
+        pendingDesignationForNextRoll.active = true;
+        pendingDesignationForNextRoll.designatedBy = who;
+        pendingDesignationForNextRoll.originalRoller = who; // Store who earned the designation
+        playerRewards.get(who).designateAnswerer = false; // Consume the reward
+        console.log(`${who} 的指定回答者奖励已激活。将在下次掷骰前触发。`);
+      }
+    });
+
+    // ===== Lottery Logic =====
+    function performLottery(playerWhoAnswered) {
+        const randomNumber = Math.random() * 100;
+        let resultMessage = '';
+        let rewardType = null;
+
+        if (randomNumber < 50) { // 50% chance of "Thank you for participating"
+            resultMessage = '谢谢参加！';
+        } else if (randomNumber < 50 + 8.33) { // ~8.33%
+            resultMessage = '恭喜你！下次可以跳过回答！';
+            rewardType = 'skipAnswer';
+        } else if (randomNumber < 50 + 8.33 + 16.67) { // ~16.67%
+            resultMessage = '恭喜你！下局回答完可以指定任何一个人投掷回答！';
+            rewardType = 'designateAnswerer';
+        } else if (randomNumber < 50 + 8.33 + 16.67 + 16.67) { // ~16.67%
+            resultMessage = '恭喜你！下局投掷时可以手动选择点数！';
+            rewardType = 'manualDiceEnabled';
+        } else { // Remaining ~8.33%
+            resultMessage = '恭喜你！可以立马指定某个玩家开始投掷骰子！';
+            rewardType = 'immediateDesignation';
+        }
+
+        lotteryMessage.textContent = resultMessage;
+        if (resultMessage !== '谢谢参加！') {
+            lotteryMessage.textContent = '🎉 ' + resultMessage; // Add party popper for actual rewards
+        }
+        lotteryResultModal.style.display = 'flex';
+
+        if (rewardType && playerRewards.has(playerWhoAnswered)) {
+            const rewards = playerRewards.get(playerWhoAnswered);
+            if (rewardType === 'skipAnswer') {
+                rewards.skipAnswer = true;
+            } else if (rewardType === 'designateAnswerer') {
+                // This is handled after answer submission now
+                // rewards.designateAnswerer = true; 
+            } else if (rewardType === 'manualDiceEnabled') {
+                rewards.manualDiceEnabled = true;
+                updateManualDiceInputState(); // Immediately update UI for manual dice
+            } else if (rewardType === 'immediateDesignation') {
+                pendingImmediateDesignation.active = true;
+                pendingImmediateDesignation.designatedBy = playerWhoAnswered;
+                // The actual designation happens after this modal is closed
+            }
+            playerRewards.set(playerWhoAnswered, rewards);
+            console.log(`${playerWhoAnswered} 获得的奖励:`, playerRewards.get(playerWhoAnswered));
+        }
+        return resultMessage; // Return the message for history
+    }
+
+    closeLotteryModalBtn.addEventListener('click', () => {
+        lotteryResultModal.style.display = 'none';
+        // If immediate designation was awarded, show the designation modal now
+        if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy) {
+            pendingImmediateDesignation.originalRoller = selectedRoller; // Store current roller before designation
+            showDesignateModal(true); // true for immediate designation
+        }
+    });
+
+
+    // ===== Designate Next Answerer Modal Logic =====
+    function showDesignateModal(isImmediate) {
+        return new Promise(resolve => {
+            designateModal.style.display = 'flex';
+            const designatorName = isImmediate ? pendingImmediateDesignation.designatedBy : pendingDesignationForNextRoll.designatedBy;
+            
+            if (isImmediate) {
+                designateMessage.textContent = `玩家 ${designatorName} 获得了“立马指定某个玩家开始投掷骰子”的奖励。请选择由谁来开始本局游戏。`;
+            } else {
+                designateMessage.textContent = `玩家 ${designatorName} 获得了“指定下一位回答者”的奖励。请选择由谁来回答本局问题。`;
+            }
+            
+            designatePlayerList.innerHTML = ''; // Clear previous list
+
+            currentPlayers.forEach(player => {
+                const playerItem = document.createElement('div');
+                playerItem.classList.add('designate-player-item');
+                playerItem.dataset.name = player.name;
+
+                const img = document.createElement('img');
+                img.src = player.avatar;
+                img.alt = player.name;
+                img.onerror = function() {
+                    this.onerror=null;
+                    this.src='https://placehold.co/40x40/CCCCCC/000?text=User';
+                };
+
+                const span = document.createElement('span');
+                span.textContent = player.name;
+
+                playerItem.appendChild(img);
+                playerItem.appendChild(span);
+
+                playerItem.addEventListener('click', () => {
+                    selectPlayer(player.name); // Select the designated player
+                    if (isImmediate) {
+                        // Consume the immediate designation reward (already consumed when set to active)
+                        pendingImmediateDesignation.active = false; 
+                        pendingImmediateDesignation.designatedBy = null;
+                        pendingImmediateDesignation.originalRoller = null;
+                    } else {
+                        // Consume the next roll designation reward (already consumed when set to active)
+                        pendingDesignationForNextRoll.active = false; 
+                        pendingDesignationForNextRoll.designatedBy = null;
+                        pendingDesignationForNextRoll.originalRoller = null;
+                    }
+                    designateModal.style.display = 'none';
+                    resolve(); // Resolve the promise
+                });
+                designatePlayerList.appendChild(playerItem);
+            });
+            // Add a cancel button
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = '取消指定';
+            cancelButton.style.marginTop = '1rem';
+            cancelButton.style.backgroundColor = '#6c757d'; // Grey color
+            cancelButton.addEventListener('click', () => {
+                if (isImmediate) {
+                    pendingImmediateDesignation.active = false; // Deactivate without selecting
+                    selectedRoller = pendingImmediateDesignation.originalRoller; // Restore original roller
+                    pendingImmediateDesignation.originalRoller = null;
+                    if(selectedRoller) selectPlayer(selectedRoller.name); // Re-select visually
+                } else {
+                    pendingDesignationForNextRoll.active = false; // Deactivate without selecting
+                     selectedRoller = pendingDesignationForNextRoll.originalRoller; // Restore original roller
+                    pendingDesignationForNextRoll.originalRoller = null;
+                    if(selectedRoller) selectPlayer(selectedRoller.name); // Re-select visually
+                }
+                designateModal.style.display = 'none';
+                resolve(); // Resolve the promise
+            });
+            designatePlayerList.appendChild(cancelButton);
+        });
+    }
+
+    // ===== Dice Map Info Modal Logic =====
+    function populateDiceMapModal() {
+        diceMapList.innerHTML = ''; // Clear previous list
+        for (const [points, mapInfo] of Object.entries(diceMap)) {
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `<strong>${points} 点:</strong> <span>${mapInfo.label}</span>`;
+            diceMapList.appendChild(listItem);
+        }
+    }
+
+    diceMapInfoIcon.addEventListener('click', () => {
+        diceMapModal.style.display = 'flex';
+    });
+
+    closeDiceMapModalBtn.addEventListener('click', () => {
+        diceMapModal.style.display = 'none';
+    });
+
+
+    // ===== History Filtering Logic =====
+    function populatePlayerFilter() {
+        const currentFilterValue = filterPlayerSelect.value;
+        filterPlayerSelect.innerHTML = '<option value="all">所有玩家</option>'; // Reset
+        currentPlayers.forEach(player => {
+            const option = document.createElement('option');
+            option.value = player.name;
+            option.textContent = player.name;
+            filterPlayerSelect.appendChild(option);
+        });
+        // Try to restore previous filter selection if player still exists
+        if (currentPlayers.some(p => p.name === currentFilterValue)) {
+            filterPlayerSelect.value = currentFilterValue;
+        }
+    }
+
+    function renderHistory() {
+        historyDiv.innerHTML = ''; // Clear previous history
+
+        const filterPlayer = filterPlayerSelect.value;
+        const filterDate = filterDateSelect.value;
+        const filterStatus = filterStatusSelect.value;
+
+        const filteredRecords = historyRecords.filter(record => {
+            if (filterPlayer !== 'all' && record.player !== filterPlayer) {
+                return false;
+            }
+
+            if (filterDate === 'today') {
+                const today = new Date();
+                const recordDate = new Date(record.date); // Assuming record.date is 'YYYY-MM-DD'
+                if (recordDate.toDateString() !== today.toDateString()) {
+                    return false;
+                }
+            }
+            // Add more date filters here if needed (e.g., 'yesterday', 'last7days')
+
+            if (filterStatus !== 'all' && record.status !== filterStatus) {
+                return false;
+            }
+            return true;
+        });
+
+        if (filteredRecords.length === 0) {
+            historyDiv.textContent = '没有符合条件的记录。';
+            return;
+        }
+
+        // Display records in reverse chronological order (newest first)
+        filteredRecords.slice().reverse().forEach(record => {
+            const block = document.createElement('details');
+            const summary = document.createElement('summary');
+            summary.textContent = `${record.player} · 抽中的问题：${record.question}`;
+            const p = document.createElement('p');
+            p.innerText = `回答者：${record.player}\n是否作答：${record.status === 'answered' ? '是' : (record.status === 'skipped' ? '否 (跳过)' : '否 (惩罚)')}\n回答/惩罚：${record.answer || '（无）'}\n时间：${record.date} ${record.time}\n抽奖结果：${record.lotteryResult}`;
+            block.appendChild(summary);
+            block.appendChild(p);
+            historyDiv.appendChild(block);
+        });
+    }
+
+    filterPlayerSelect.addEventListener('change', renderHistory);
+    filterDateSelect.addEventListener('change', renderHistory);
+    filterStatusSelect.addEventListener('change', renderHistory);
+
+
+    // Initialize page
+    initializePlayers();
+
+  })();
+});
+</script>
+</body>
+</html>
