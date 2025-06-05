@@ -271,7 +271,7 @@
       align-items: center;
       margin-top: 0.8rem;
     }
-    #questionTypeDisplay { 
+    #questionTypeDisplay_old { 
       font-size: 2.2rem;
       font-weight: 700;
       color: var(--primary);
@@ -306,47 +306,46 @@
 
     /* ===== 直接问题显示区 (新主要逻辑) ===== */
     #directQuestionDisplay {
-        flex-direction: column;
-        align-items: center;
-        margin-top: 0.8rem;
-        padding: 1rem;
-        text-align: center;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 0.8rem;
+      padding: 1rem;
+      text-align: center;
     }
     #directQuestionText {
-        font-size: 1.5rem; 
-        font-weight: 600;
-        margin-bottom: 1.5rem; 
-        min-height: 3em; 
-        color: #333;
+      font-size: 1.5rem; 
+      font-weight: 600;
+      margin-bottom: 1.5rem; 
+      min-height: 3em; 
+      color: #333;
     }
     #directQuestionActions {
-        display: flex;
-        gap: 1rem; /* Increased gap */
-        justify-content: center;
-        flex-wrap: wrap; 
+      display: flex;
+      gap: 1rem; /* Increased gap */
+      justify-content: center;
+      flex-wrap: wrap; 
     }
-     #directQuestionActions button {
-        padding: 0.7rem 1.2rem; 
+    #directQuestionActions button {
+      padding: 0.7rem 1.2rem; 
     }
     #changeQuestionBtn {
-        background-color: #f59e0b; 
+      background-color: #f59e0b; 
     }
     #changeQuestionBtn:hover {
-        background-color: #d97706; 
+      background-color: #d97706; 
     }
     #directAnswerBtn { /* Color for "作答" */
-        background-color: #22c55e; 
+      background-color: #22c55e; 
     }
     #directAnswerBtn:hover {
-        background-color: #16a34a; 
+      background-color: #16a34a; 
     }
     #directPenaltyBtn { /* Color for "接受惩罚" */
-        background-color: #ef4444; 
+      background-color: #ef4444; 
     }
     #directPenaltyBtn:hover {
-        background-color: #dc2626; 
+      background-color: #dc2626; 
     }
-
 
     .hidden {
       display: none !important;
@@ -384,17 +383,17 @@
       position: relative; 
     }
     .close-modal-btn {
-        position: absolute;
-        top: 10px;
-        right: 15px;
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #888;
-        cursor: pointer;
-        line-height: 1;
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #888;
+      cursor: pointer;
+      line-height: 1;
     }
     .close-modal-btn:hover {
-        color: #333;
+      color: #333;
     }
     #modalCard h2 {
       margin-top: 0;
@@ -569,7 +568,6 @@
     /* ===== 筛选器：历史记录 ===== */
     .history-filters {
       display: flex;
-      /* flex-wrap: wrap; Default to wrap for larger screens if needed */
       gap: 0.5rem; /* Reduced gap for tighter horizontal layout */
       margin-bottom: 1rem;
       justify-content: space-between;
@@ -578,10 +576,10 @@
       z-index: 5;      
     }
     .history-filters > div { 
-        position: relative; 
-        z-index: 10; 
-        flex: 1; /* Distribute space among filter groups */
-        min-width: 80px; /* Prevent them from becoming too small */
+      position: relative; 
+      z-index: 10; 
+      flex: 1; /* Distribute space among filter groups */
+      min-width: 80px; /* Prevent them from becoming too small */
     }
     .history-filters label { /* Default label style for larger screens */
       font-weight: 600;
@@ -601,8 +599,8 @@
       z-index: 15; 
     }
     #history {
-        position: relative;
-        z-index: 1; 
+      position: relative;
+      z-index: 1; 
     }
 
     @media screen and (max-width: 480px) {
@@ -615,33 +613,77 @@
         display: none; /* Hide labels on mobile to save space */
       }
       .history-filters > div {
-        /* flex: 1; is already set, which should work */
         margin-bottom: 0; /* Remove bottom margin when in a row */
       }
-       .history-filters select {
+      .history-filters select {
         font-size: 0.8rem; /* Even smaller font if needed for very small screens */
         padding: 0.5rem 0.3rem; /* Adjust padding for smaller selects */
       }
     }
-     /* Dice Map Modal specific close button */
+
+    /* Dice Map Modal specific close button */
     #diceMapModalCard .close-modal-btn {
-        position: absolute;
-        top: 10px;
-        right: 15px;
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #888;
-        cursor: pointer;
-        line-height: 1;
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #888;
+      cursor: pointer;
+      line-height: 1;
     }
     #diceMapModalCard .close-modal-btn:hover {
-        color: #333;
+      color: #333;
     }
   </style>
+
+  <!-- ===== Firebase 兼容版 SDK（compat） ===== -->
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
+
+  <!-- ===== Firebase 初始化 & 全局记录同步 ===== -->
+  <script>
+    // —— 1. Firebase 初始化（公共模式：所有用户共用 records 集合） —— 
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJutaK4LkYI5mZbK9efUPW6if6GVpJes0",
+      authDomain: "party-dice-727e5.firebaseapp.com",
+      projectId: "party-dice-727e5",
+      storageBucket: "party-dice-727e5.firebasestorage.app",
+      messagingSenderId: "710313413804",
+      appId: "1:710313413804:web:34b5390e86e3d8ec246309"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // 离线缓存
+    db.enableIndexedDbPersistence().catch(() => {});
+
+    // 保存记录到公共集合 'records'
+    function saveRecordToCloud(record) {
+      db.collection('records').add({
+        ...record,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    // 实时监听集合 'records'，并更新本地 historyRecords
+    db.collection('records')
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(snapshot => {
+        historyRecords.length = 0;
+        snapshot.forEach(doc => historyRecords.push(doc.data()));
+        if (typeof renderHistory === 'function') {
+          renderHistory();
+        }
+      });
+  </script>
 </head>
 <body>
   <h1>来掷骰子啦</h1>
 
+  <!-- ==== 选择玩家区 ==== -->
   <div class="section">
     <p style="font-weight: 600; margin-bottom: 0.8rem; text-align: center;">请选择掷骰子的玩家：</p>
     <div id="playerSelectionContainer">
@@ -653,6 +695,7 @@
     </div>
   </div>
 
+  <!-- ==== 掷骰子 & 手动输入区 ==== -->
   <div class="section" style="margin-top: 1rem;">
     <div style="text-align: center;">
       <button id="rollBtn" disabled>掷骰子</button>
@@ -666,6 +709,7 @@
     <div id="diceMapInfoIcon">?</div>
   </div>
 
+  <!-- ==== 滚动问题区（旧逻辑，现已隐藏） ==== -->
   <div id="questionScroller" class="section hidden"> 
     <p id="questionTypeDisplay_old"></p> 
     <div id="scrollingQuestionWrapper">
@@ -678,16 +722,18 @@
     </div>
   </div>
 
+  <!-- ==== 直接问题显示区（新逻辑） ==== -->
   <div id="directQuestionDisplay" class="section hidden">
     <p id="questionTypeDisplay"></p> 
     <p id="directQuestionText"></p>
     <div id="directQuestionActions">
-        <button id="changeQuestionBtn">换题 (<span id="changeQuestionAttemptsLeft">2</span>)</button>
-        <button id="directPenaltyBtn">惩罚</button> <button id="directAnswerBtn">作答</button>
+      <button id="changeQuestionBtn">换题 (<span id="changeQuestionAttemptsLeft">2</span>)</button>
+      <button id="directPenaltyBtn">惩罚</button>
+      <button id="directAnswerBtn">作答</button>
     </div>
   </div>
 
-
+  <!-- ==== 历史记录区 ==== -->
   <div class="section" style="margin-top: 1rem; z-index: 1;"> 
     <h2 style="font-size: 1.3rem; margin-bottom: 0.6rem; text-align: center;">历史记录</h2>
     <div class="history-filters">
@@ -714,9 +760,12 @@
         </select>
       </div>
     </div>
-    <div id="history" style="font-size: 0.95rem; text-align: center;">没有符合条件的记录。</div>
+    <div id="history" style="font-size: 0.95rem; text-align: center;">
+      没有符合条件的记录。
+    </div>
   </div>
 
+  <!-- ==== 问题弹窗 ==== -->
   <div id="questionModal">
     <div id="modalCard">
       <span class="close-modal-btn" id="closeQuestionModalBtn">&times;</span>
@@ -748,6 +797,7 @@
     </div>
   </div>
 
+  <!-- ==== 指定回答者弹窗 ==== -->
   <div id="designateModal">
     <div id="designateModalCard">
       <span class="close-modal-btn" id="closeDesignateModalBtn">&times;</span>
@@ -758,6 +808,7 @@
     </div>
   </div>
 
+  <!-- ==== 抽奖结果弹窗 ==== -->
   <div id="lotteryResultModal">
     <div id="lotteryResultModalCard">
       <span class="close-modal-btn" id="closeLotteryResultModalBtn">&times;</span>
@@ -767,18 +818,19 @@
     </div>
   </div>
 
+  <!-- ==== 骰子规则弹窗 ==== -->
   <div id="diceMapModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 100;">
     <div id="diceMapModalCard" style="background: #fff; border-radius: 1rem; padding: 2rem; width: 90%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative;">
       <span class="close-modal-btn" id="closeDiceMapModalBtnLegacy">&times;</span>
       <h2 style="text-align: center; margin-top: 0; font-size: 1.3rem; color: var(--primary);">骰子点数与问题类型</h2>
-      <ul id="diceMapList" style="list-style: none; padding: 0; margin: 1rem 0; font-size: 1rem; line-height: 1.5;">
-        </ul>
+      <ul id="diceMapList" style="list-style: none; padding: 0; margin: 1rem 0; font-size: 1rem; line-height: 1.5;"></ul>
       <div style="text-align: center; margin-top: 1rem;">
         <button id="closeDiceMapModalBtnMain" style="background-color: #6c757d; font-size: 1rem; padding: 0.7rem; width: 100%;">关闭</button>
       </div>
     </div>
   </div>
 
+  <!-- ===== 主逻辑 JS 区 ===== -->
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       (function() {
@@ -820,9 +872,9 @@
           1: { key: 'emotional_basic', label: '情感问题 · Basic' },
           4: { key: 'emotional_pro', label: '情感问题 · Pro' },
           2: { key: 'hobby_basic', label: '兴趣爱好 · Basic' },
-          5: { key: 'hobby_pro', label: '兴趣爱好 · Pro' }, 
+          5: { key: 'hobby_pro', label: '兴趣爱好 · Pro' },
           3: { key: 'quirky_basic', label: '古怪问题 · Basic' },
-          6: { key: 'quirky_pro', label: '古怪问题 · Pro' } 
+          6: { key: 'quirky_pro', label: '古怪问题 · Pro' }
         };
 
         /* ===== 玩家 & 状态数据 ===== */
@@ -833,24 +885,23 @@
           { name: 'Sanchez', avatar: 'https://placehold.co/60x60/DDA0DD/000?text=S', deletable: false }
         ];
         let currentPlayers = [...defaultPlayers];
-        const historyRecords = []; 
-        const personQuestionHistory = new Map(); 
-        const playerRewards = new Map(); 
+        const historyRecords = [];
+        const personQuestionHistory = new Map();
+        const playerRewards = new Map();
         let selectedRoller = null;
-        
-        let currentModalOptions = {}; 
+
+        let currentModalOptions = {};
 
         let currentDirectQuestion = null;
         let currentDirectBankKey = '';
         let directChangeAttemptsLeft = 0;
 
-
-        let willAnswerValue = ''; 
-        let selectedPenalty = ''; 
+        let willAnswerValue = '';
+        let selectedPenalty = '';
         let pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
         let pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
         let longPressTimer;
-        const LONG_PRESS_THRESHOLD = 1000; 
+        const LONG_PRESS_THRESHOLD = 1000;
 
         /* ===== DOM 引用 ===== */
         const playerSelectionContainer = document.getElementById('playerSelectionContainer');
@@ -867,20 +918,19 @@
         const diceMapInfoIcon = document.getElementById('diceMapInfoIcon');
         const diceMapModal = document.getElementById('diceMapModal');
         const diceMapList = document.getElementById('diceMapList');
-        const closeDiceMapModalBtnLegacy = document.getElementById('closeDiceMapModalBtnLegacy'); 
-        const closeDiceMapModalBtnMain = document.getElementById('closeDiceMapModalBtnMain'); 
+        const closeDiceMapModalBtnLegacy = document.getElementById('closeDiceMapModalBtnLegacy');
+        const closeDiceMapModalBtnMain = document.getElementById('closeDiceMapModalBtnMain');
 
         const questionScroller = document.getElementById('questionScroller');
-        
+
         const directQuestionDisplay = document.getElementById('directQuestionDisplay');
-        const questionTypeDisplay = document.getElementById('questionTypeDisplay'); 
+        const questionTypeDisplay = document.getElementById('questionTypeDisplay');
         const directQuestionText = document.getElementById('directQuestionText');
         const directQuestionActions = document.getElementById('directQuestionActions');
         const changeQuestionBtn = document.getElementById('changeQuestionBtn');
         const changeQuestionAttemptsLeftSpan = document.getElementById('changeQuestionAttemptsLeft');
         const directAnswerBtn = document.getElementById('directAnswerBtn');
         const directPenaltyBtn = document.getElementById('directPenaltyBtn');
-
 
         const historyDiv = document.getElementById('history');
         const filterPlayerSelect = document.getElementById('filterPlayer');
@@ -897,19 +947,16 @@
         const penaltyOptionsContainer = document.getElementById('penaltyOptionsContainer');
         const closeQuestionModalBtn = document.getElementById('closeQuestionModalBtn');
 
-
         const designateModal = document.getElementById('designateModal');
         const designateMessage = document.getElementById('designateMessage');
         const designatePlayerList = document.getElementById('designatePlayerList');
         const designateCancelBtn = document.getElementById('designateCancelBtn');
         const closeDesignateModalBtn = document.getElementById('closeDesignateModalBtn');
 
-
         const lotteryResultModal = document.getElementById('lotteryResultModal');
         const lotteryMessage = document.getElementById('lotteryMessage');
-        const closeLotteryModalBtn = document.getElementById('closeLotteryModalBtn'); 
-        const closeLotteryResultModalBtn = document.getElementById('closeLotteryResultModalBtn'); 
-
+        const closeLotteryModalBtn = document.getElementById('closeLotteryModalBtn');
+        const closeLotteryResultModalBtn = document.getElementById('closeLotteryResultModalBtn');
 
         /* ===== 初始化 ===== */
         function initializePlayers() {
@@ -924,56 +971,55 @@
           populatePlayerFilter();
           renderHistory();
           populateDiceMapModal();
-          setupDirectQuestionListeners(); 
+          setupDirectQuestionListeners();
           setupModalCloseButtons();
         }
-        
+
         function setupModalCloseButtons() {
-            if(closeQuestionModalBtn) {
-                closeQuestionModalBtn.addEventListener('click', () => {
-                    questionModal.style.display = 'none';
-                });
-            }
-            if(closeDesignateModalBtn) {
-                closeDesignateModalBtn.addEventListener('click', () => {
-                    designateModal.style.display = 'none';
-                    if (pendingImmediateDesignation.active) {
-                        selectedRoller = pendingImmediateDesignation.originalRoller;
-                        pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-                        if (selectedRoller) selectPlayer(selectedRoller.name); 
-                    }
-                    if (pendingDesignationForNextRoll.active) {
-                         selectedRoller = pendingDesignationForNextRoll.originalRoller;
-                         pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
-                         if (selectedRoller) selectPlayer(selectedRoller.name);
-                    }
-                });
-            }
-            if(closeLotteryResultModalBtn) {
-                closeLotteryResultModalBtn.addEventListener('click', () => {
-                    lotteryResultModal.style.display = 'none';
-                    if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy) {
-                        pendingImmediateDesignation.originalRoller = selectedRoller; 
-                        showDesignateModal(true); 
-                    }
-                });
-            }
-            if(closeDiceMapModalBtnLegacy) {
-                closeDiceMapModalBtnLegacy.addEventListener('click', () => {
-                    diceMapModal.style.display = 'none';
-                });
-            }
-            const closeNewPlayerModalBtn = document.getElementById('closeNewPlayerModalBtn');
-            if(closeNewPlayerModalBtn) {
-                closeNewPlayerModalBtn.addEventListener('click', () => {
-                    document.getElementById('newPlayerModal').style.display = 'none';
-                });
-            }
+          if (closeQuestionModalBtn) {
+            closeQuestionModalBtn.addEventListener('click', () => {
+              questionModal.style.display = 'none';
+            });
+          }
+          if (closeDesignateModalBtn) {
+            closeDesignateModalBtn.addEventListener('click', () => {
+              designateModal.style.display = 'none';
+              if (pendingImmediateDesignation.active) {
+                selectedRoller = pendingImmediateDesignation.originalRoller;
+                pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
+                if (selectedRoller) selectPlayer(selectedRoller.name);
+              }
+              if (pendingDesignationForNextRoll.active) {
+                selectedRoller = pendingDesignationForNextRoll.originalRoller;
+                pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
+                if (selectedRoller) selectPlayer(selectedRoller.name);
+              }
+            });
+          }
+          if (closeLotteryResultModalBtn) {
+            closeLotteryResultModalBtn.addEventListener('click', () => {
+              lotteryResultModal.style.display = 'none';
+              if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy) {
+                pendingImmediateDesignation.originalRoller = selectedRoller;
+                showDesignateModal(true);
+              }
+            });
+          }
+          if (closeDiceMapModalBtnLegacy) {
+            closeDiceMapModalBtnLegacy.addEventListener('click', () => {
+              diceMapModal.style.display = 'none';
+            });
+          }
+          const closeNewPlayerModalBtn = document.getElementById('closeNewPlayerModalBtn');
+          if (closeNewPlayerModalBtn) {
+            closeNewPlayerModalBtn.addEventListener('click', () => {
+              document.getElementById('newPlayerModal').style.display = 'none';
+            });
+          }
         }
 
-
         function renderPlayerCards() {
-          playerSelection.innerHTML = ''; 
+          playerSelection.innerHTML = '';
           currentPlayers.forEach((player) => {
             const playerCard = document.createElement('div');
             playerCard.classList.add('player-card');
@@ -982,9 +1028,9 @@
             const img = document.createElement('img');
             img.src = player.avatar;
             img.alt = player.name;
-            img.onerror = function() { 
-              this.onerror = null; 
-              this.src = 'https://placehold.co/60x60/CCCCCC/000?text=User'; 
+            img.onerror = function() {
+              this.onerror = null;
+              this.src = 'https://placehold.co/60x60/CCCCCC/000?text=User';
             };
 
             const span = document.createElement('span');
@@ -993,23 +1039,23 @@
             playerCard.appendChild(img);
             playerCard.appendChild(span);
 
-            if (player.deletable !== false) { 
+            if (player.deletable !== false) {
               playerCard.addEventListener('mousedown', (e) => {
-                if (e.button === 0) { 
+                if (e.button === 0) {
                   longPressTimer = setTimeout(() => {
                     deletePlayer(player.name);
-                    longPressTimer = null; 
+                    longPressTimer = null;
                   }, LONG_PRESS_THRESHOLD);
                 }
               });
               playerCard.addEventListener('mouseup', () => {
-                if (longPressTimer) { 
+                if (longPressTimer) {
                   clearTimeout(longPressTimer);
                   longPressTimer = null;
-                  selectPlayer(player.name); 
+                  selectPlayer(player.name);
                 }
               });
-              playerCard.addEventListener('mouseleave', () => { 
+              playerCard.addEventListener('mouseleave', () => {
                 clearTimeout(longPressTimer);
                 longPressTimer = null;
               });
@@ -1018,7 +1064,7 @@
                   deletePlayer(player.name);
                   longPressTimer = null;
                 }, LONG_PRESS_THRESHOLD);
-              }, { passive: true }); 
+              }, { passive: true });
               playerCard.addEventListener('touchend', () => {
                 if (longPressTimer) {
                   clearTimeout(longPressTimer);
@@ -1030,7 +1076,7 @@
                 clearTimeout(longPressTimer);
                 longPressTimer = null;
               });
-            } else { 
+            } else {
               playerCard.addEventListener('click', () => {
                 selectPlayer(player.name);
               });
@@ -1041,10 +1087,10 @@
           const addPlayerCard = document.createElement('div');
           addPlayerCard.id = 'addPlayerCard';
           addPlayerCard.classList.add('player-card');
-          addPlayerCard.innerHTML = '<span class="plus-icon">+</span>'; 
+          addPlayerCard.innerHTML = '<span class="plus-icon">+</span>';
           addPlayerCard.addEventListener('click', () => {
             document.getElementById('newPlayerModal').style.display = 'flex';
-            document.getElementById('newPlayerNameInput').focus(); 
+            document.getElementById('newPlayerNameInput').focus();
           });
           playerSelection.appendChild(addPlayerCard);
 
@@ -1052,12 +1098,12 @@
             const currentSelectedCard = document.querySelector(`.player-card[data-name="${selectedRoller.name}"]`);
             if (currentSelectedCard) {
               currentSelectedCard.classList.add('selected');
-            } else { 
+            } else {
               selectedRoller = null;
               rollBtn.disabled = true;
             }
           } else {
-            rollBtn.disabled = true; 
+            rollBtn.disabled = true;
           }
         }
 
@@ -1068,49 +1114,48 @@
           const selectedCard = document.querySelector(`.player-card[data-name="${name}"]`);
           if (selectedCard) {
             selectedCard.classList.add('selected');
-            gsap.fromTo(selectedCard, { scale: 1 }, { scale: 1.02, duration: 0.1, yoyo: true, repeat: 1 }); 
+            gsap.fromTo(selectedCard, { scale: 1 }, { scale: 1.02, duration: 0.1, yoyo: true, repeat: 1 });
           }
           selectedRoller = currentPlayers.find((p) => p.name === name);
-          rollBtn.disabled = false; 
-          updateManualDiceInputState(); 
+          rollBtn.disabled = false;
+          updateManualDiceInputState();
         }
 
         function deletePlayer(nameToDelete) {
           const playerToDelete = currentPlayers.find(p => p.name === nameToDelete);
           if (playerToDelete && playerToDelete.deletable === false) {
-            showCustomAlert('此玩家不能被删除。'); 
+            showCustomAlert('此玩家不能被删除。');
             return;
           }
           showCustomConfirm(`确定要删除玩家 "${nameToDelete}" 吗？`, () => {
             currentPlayers = currentPlayers.filter((p) => p.name !== nameToDelete);
-            personQuestionHistory.delete(nameToDelete); 
-            playerRewards.delete(nameToDelete); 
-            renderPlayerCards(); 
-            populatePlayerFilter(); 
+            personQuestionHistory.delete(nameToDelete);
+            playerRewards.delete(nameToDelete);
+            renderPlayerCards();
+            populatePlayerFilter();
             for (let i = historyRecords.length - 1; i >= 0; i--) {
               if (historyRecords[i].player === nameToDelete) {
                 historyRecords.splice(i, 1);
               }
             }
-            renderHistory(); 
+            renderHistory();
             if (selectedRoller && selectedRoller.name === nameToDelete) {
               selectedRoller = null;
               rollBtn.disabled = true;
             }
             if (pendingDesignationForNextRoll.active && pendingDesignationForNextRoll.designatedBy === nameToDelete) {
-                pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
-                designateModal.style.display = 'none';
+              pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
+              designateModal.style.display = 'none';
             }
             if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy === nameToDelete) {
-                pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-                designateModal.style.display = 'none';
+              pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
+              designateModal.style.display = 'none';
             }
           });
         }
-        
+
         function showCustomAlert(message) { console.warn("Custom Alert:", message); alert(message); }
         function showCustomConfirm(message, callback) { if(confirm(message)) callback(); }
-
 
         function updateManualDiceInputState() {
           if (selectedRoller && playerRewards.has(selectedRoller.name) && playerRewards.get(selectedRoller.name).manualDiceEnabled) {
@@ -1124,12 +1169,11 @@
           }
         }
 
-
         /* ===== 事件绑定 ===== */
         document.getElementById('confirmAddPlayerBtn').addEventListener('click', () => {
           const newPlayerNameInput = document.getElementById('newPlayerNameInput');
           const newName = newPlayerNameInput.value.trim();
-          const newPlayerModalMessage = document.getElementById('newPlayerModalMessage'); 
+          const newPlayerModalMessage = document.getElementById('newPlayerModalMessage');
 
           if (newName) {
             if (currentPlayers.some(p => p.name === newName)) {
@@ -1138,13 +1182,13 @@
             } else {
               const newPlayer = {
                 name: newName,
-                avatar: `https://placehold.co/60x60/FFB6C1/000?text=${newName.charAt(0).toUpperCase()}`, 
-                deletable: true 
+                avatar: `https://placehold.co/60x60/FFB6C1/000?text=${newName.charAt(0).toUpperCase()}`,
+                deletable: true
               };
               currentPlayers.push(newPlayer);
-              playerRewards.set(newName, { skipAnswer: false, designateAnswerer: false, manualDiceEnabled: false }); 
+              playerRewards.set(newName, { skipAnswer: false, designateAnswerer: false, manualDiceEnabled: false });
               renderPlayerCards();
-              populatePlayerFilter(); 
+              populatePlayerFilter();
 
               addPlayerMessage.textContent = `玩家 "${newName}" 已添加！`;
               addPlayerMessage.classList.remove('hidden');
@@ -1153,9 +1197,9 @@
                   gsap.to(addPlayerMessage, { opacity: 0, y: -10, delay: 2, duration: 0.5, onComplete: () => addPlayerMessage.classList.add('hidden') });
                 }
               });
-              document.getElementById('newPlayerModal').style.display = 'none'; 
-              newPlayerNameInput.value = ''; 
-              newPlayerModalMessage.textContent = ''; 
+              document.getElementById('newPlayerModal').style.display = 'none';
+              newPlayerNameInput.value = '';
+              newPlayerModalMessage.textContent = '';
             }
           } else {
             newPlayerModalMessage.textContent = '玩家名字不能为空！';
@@ -1171,14 +1215,14 @@
 
         randomSelectPlayerBtn.addEventListener('click', () => {
           if (currentPlayers.length === 0) {
-            showCustomAlert('没有可选择的玩家！'); 
+            showCustomAlert('没有可选择的玩家！');
             return;
           }
           let availablePlayersForRandom = [...currentPlayers];
           if (selectedRoller && currentPlayers.length > 1) {
             availablePlayersForRandom = currentPlayers.filter(p => p.name !== selectedRoller.name);
-            if (availablePlayersForRandom.length === 0) { 
-                availablePlayersForRandom = [...currentPlayers];
+            if (availablePlayersForRandom.length === 0) {
+              availablePlayersForRandom = [...currentPlayers];
             }
           }
 
@@ -1189,12 +1233,12 @@
           const newlySelectedCard = playerSelection.querySelector(`.player-card.selected[data-name="${randomlySelectedPlayer.name}"]`);
           if (newlySelectedCard) {
             gsap.to(playerSelection, {
-                scrollLeft: newlySelectedCard.offsetLeft - (playerSelection.clientWidth / 2) + (newlySelectedCard.offsetWidth / 2),
-                duration: 0.5,
-                ease: "power2.out"
+              scrollLeft: newlySelectedCard.offsetLeft - (playerSelection.clientWidth / 2) + (newlySelectedCard.offsetWidth / 2),
+              duration: 0.5,
+              ease: "power2.out"
             });
           }
-          rollBtn.disabled = false; 
+          rollBtn.disabled = false;
         });
 
         rollBtn.addEventListener('click', async () => {
@@ -1203,11 +1247,11 @@
             return;
           }
           if (pendingImmediateDesignation.active) {
-            pendingImmediateDesignation.originalRoller = selectedRoller; 
-            await showDesignateModal(true); 
-            if (!selectedRoller || pendingImmediateDesignation.active) { 
-                pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null }; 
-                return;
+            pendingImmediateDesignation.originalRoller = selectedRoller;
+            await showDesignateModal(true);
+            if (!selectedRoller || pendingImmediateDesignation.active) {
+              pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
+              return;
             }
           }
           await performDiceRoll();
@@ -1222,8 +1266,8 @@
             pendingImmediateDesignation.originalRoller = selectedRoller;
             await showDesignateModal(true);
             if (!selectedRoller || pendingImmediateDesignation.active) {
-                pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-                return;
+              pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
+              return;
             }
           }
           const manualPoints = parseInt(manualDiceInput.value, 10);
@@ -1237,21 +1281,21 @@
         async function performDiceRoll(manualPoints = null) {
           questionScroller.classList.add('hidden');
           directQuestionDisplay.classList.add('hidden');
-            
+
           rollBtn.disabled = true;
           useManualDiceBtn.disabled = true;
           manualDiceInput.disabled = true;
-          playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'none'); 
+          playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'none');
 
           if (pendingDesignationForNextRoll.active) {
-            await showDesignateModal(false); 
-            if (!selectedRoller || pendingDesignationForNextRoll.active) { 
-                selectedRoller = pendingDesignationForNextRoll.originalRoller; 
-                pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null }; 
-                rollBtn.disabled = false;
-                updateManualDiceInputState();
-                playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'auto');
-                return; 
+            await showDesignateModal(false);
+            if (!selectedRoller || pendingDesignationForNextRoll.active) {
+              selectedRoller = pendingDesignationForNextRoll.originalRoller;
+              pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
+              rollBtn.disabled = false;
+              updateManualDiceInputState();
+              playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'auto');
+              return;
             }
           }
 
@@ -1259,122 +1303,120 @@
           if (manualPoints !== null) {
             points = manualPoints;
             gsap.to(diceFace, { duration: 0.1, scale: 1.2, yoyo: true, repeat: 1, ease: "power1.out" });
-            await new Promise(r => setTimeout(r, 200)); 
+            await new Promise(r => setTimeout(r, 200));
             diceFace.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][points - 1];
             if (selectedRoller && playerRewards.has(selectedRoller.name) && playerRewards.get(selectedRoller.name).manualDiceEnabled) {
-                playerRewards.get(selectedRoller.name).manualDiceEnabled = false;
-                updateManualDiceInputState(); 
+              playerRewards.get(selectedRoller.name).manualDiceEnabled = false;
+              updateManualDiceInputState();
             }
           } else {
             const diceChars = ['⚀','⚁','⚂','⚃','⚄','⚅'];
-            let loops = 12; 
+            let loops = 12;
             const interval = setInterval(() => {
               diceFace.textContent = diceChars[Math.floor(Math.random() * 6)];
               gsap.to(diceFace, { duration: 0.1, scale: 1.2, yoyo: true, repeat: 1, ease: "power1.out" });
               if (--loops === 0) clearInterval(interval);
-            }, 80); 
-            await new Promise(r => setTimeout(r, loops * 80 + 60)); 
+            }, 80);
+            await new Promise(r => setTimeout(r, loops * 80 + 60));
             points = Math.floor(Math.random() * 6) + 1;
             diceFace.textContent = diceChars[points - 1];
           }
           diceResult.textContent = `${selectedRoller.name} 掷出了：${points} 点`;
-          
+
           const mapInfo = diceMap[points];
-          if (mapInfo) { 
+          if (mapInfo) {
             prepareDirectQuestionInterface(points, selectedRoller.name);
           } else {
             console.error(`骰子点数 ${points} 没有对应的问题类型。`);
             diceResult.textContent += " (但没有找到对应的问题类型)";
-            questionScroller.classList.add('hidden'); 
-            directQuestionDisplay.classList.add('hidden'); 
+            questionScroller.classList.add('hidden');
+            directQuestionDisplay.classList.add('hidden');
           }
 
           rollBtn.disabled = false;
           updateManualDiceInputState();
           playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'auto');
         }
-        
+
         function prepareDirectQuestionInterface(points, rollerName) {
-            questionScroller.classList.add('hidden'); 
-            directQuestionDisplay.classList.remove('hidden'); 
-            gsap.fromTo(directQuestionDisplay, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+          questionScroller.classList.add('hidden');
+          directQuestionDisplay.classList.remove('hidden');
+          gsap.fromTo(directQuestionDisplay, { opacity: 0 }, { opacity: 1, duration: 0.3 });
 
-            const map = diceMap[points];
-            currentDirectBankKey = map.key; 
-            questionTypeDisplay.textContent = map.label; 
+          const map = diceMap[points];
+          currentDirectBankKey = map.key;
+          questionTypeDisplay.textContent = map.label;
 
-            const allQuestions = questionBank[currentDirectBankKey].map(q => ({ ...q }));
-            const history = personQuestionHistory.get(rollerName) || [];
-            let filteredQuestions = allQuestions.filter(q => !history.includes(q.text));
+          const allQuestions = questionBank[currentDirectBankKey].map(q => ({ ...q }));
+          const history = personQuestionHistory.get(rollerName) || [];
+          let filteredQuestions = allQuestions.filter(q => !history.includes(q.text));
 
-            if (filteredQuestions.length === 0) {
-                filteredQuestions = [...allQuestions]; 
-            }
-            
-            currentDirectQuestion = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
-            directQuestionText.textContent = currentDirectQuestion ? currentDirectQuestion.text : "此类型暂无问题。";
+          if (filteredQuestions.length === 0) {
+            filteredQuestions = [...allQuestions];
+          }
 
+          currentDirectQuestion = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
+          directQuestionText.textContent = currentDirectQuestion ? currentDirectQuestion.text : "此类型暂无问题。";
 
-            directChangeAttemptsLeft = 2; 
-            changeQuestionAttemptsLeftSpan.textContent = directChangeAttemptsLeft;
-            changeQuestionBtn.disabled = !currentDirectQuestion || directChangeAttemptsLeft === 0;
-            directAnswerBtn.disabled = !currentDirectQuestion;
-            directPenaltyBtn.disabled = !currentDirectQuestion;
-            
-            if (currentDirectQuestion) {
-                window.scrollTo({ top: directQuestionDisplay.offsetTop - 20, behavior: 'smooth' });
-            }
+          directChangeAttemptsLeft = 2;
+          changeQuestionAttemptsLeftSpan.textContent = directChangeAttemptsLeft;
+          changeQuestionBtn.disabled = !currentDirectQuestion || directChangeAttemptsLeft === 0;
+          directAnswerBtn.disabled = !currentDirectQuestion;
+          directPenaltyBtn.disabled = !currentDirectQuestion;
+
+          if (currentDirectQuestion) {
+            window.scrollTo({ top: directQuestionDisplay.offsetTop - 20, behavior: 'smooth' });
+          }
         }
 
         function setupDirectQuestionListeners() {
-            changeQuestionBtn.addEventListener('click', () => {
-                if (directChangeAttemptsLeft > 0 && currentDirectQuestion) {
-                    directChangeAttemptsLeft--;
-                    changeQuestionAttemptsLeftSpan.textContent = directChangeAttemptsLeft;
+          changeQuestionBtn.addEventListener('click', () => {
+            if (directChangeAttemptsLeft > 0 && currentDirectQuestion) {
+              directChangeAttemptsLeft--;
+              changeQuestionAttemptsLeftSpan.textContent = directChangeAttemptsLeft;
 
-                    const allQuestions = questionBank[currentDirectBankKey].map(q => ({ ...q }));
-                    const history = personQuestionHistory.get(selectedRoller.name) || [];
-                    let availableQuestions = allQuestions.filter(q => q.text !== currentDirectQuestion.text && !history.includes(q.text));
-                    
-                    if (availableQuestions.length === 0) { 
-                        availableQuestions = allQuestions.filter(q => q.text !== currentDirectQuestion.text);
-                         if (availableQuestions.length === 0 && allQuestions.length > 0) {
-                            availableQuestions = [currentDirectQuestion]; 
-                         } else if (availableQuestions.length === 0 && allQuestions.length === 0) {
-                            directQuestionText.textContent = "此类型暂无更多问题。";
-                            changeQuestionBtn.disabled = true;
-                            return;
-                         }
-                    }
-                    
-                    currentDirectQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
-                    directQuestionText.textContent = currentDirectQuestion.text;
+              const allQuestions = questionBank[currentDirectBankKey].map(q => ({ ...q }));
+              const history = personQuestionHistory.get(selectedRoller.name) || [];
+              let availableQuestions = allQuestions.filter(q => q.text !== currentDirectQuestion.text && !history.includes(q.text));
 
-                    if (directChangeAttemptsLeft === 0) {
-                        changeQuestionBtn.disabled = true;
-                    }
+              if (availableQuestions.length === 0) {
+                availableQuestions = allQuestions.filter(q => q.text !== currentDirectQuestion.text);
+                if (availableQuestions.length === 0 && allQuestions.length > 0) {
+                  availableQuestions = [currentDirectQuestion];
+                } else if (availableQuestions.length === 0 && allQuestions.length === 0) {
+                  directQuestionText.textContent = "此类型暂无更多问题。";
+                  changeQuestionBtn.disabled = true;
+                  return;
                 }
-            });
+              }
 
-            directAnswerBtn.addEventListener('click', () => {
-                if (currentDirectQuestion) {
-                    showQuestionModal(currentDirectQuestion.text, { isDirectAnswer: true });
-                }
-            });
+              currentDirectQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
+              directQuestionText.textContent = currentDirectQuestion.text;
 
-            directPenaltyBtn.addEventListener('click', () => {
-                 if (currentDirectQuestion) {
-                    showQuestionModal(currentDirectQuestion.text, { isDirectPenalty: true });
-                }
-            });
+              if (directChangeAttemptsLeft === 0) {
+                changeQuestionBtn.disabled = true;
+              }
+            }
+          });
+
+          directAnswerBtn.addEventListener('click', () => {
+            if (currentDirectQuestion) {
+              showQuestionModal(currentDirectQuestion.text, { isDirectAnswer: true });
+            }
+          });
+
+          directPenaltyBtn.addEventListener('click', () => {
+            if (currentDirectQuestion) {
+              showQuestionModal(currentDirectQuestion.text, { isDirectPenalty: true });
+            }
+          });
         }
-
 
         function addQuestionToHistory(personName, questionText) {
           let history = personQuestionHistory.get(personName) || [];
           if (!history.includes(questionText)) {
             history.push(questionText);
-            if (history.length > 20) { 
+            if (history.length > 20) {
               history.shift();
             }
             personQuestionHistory.set(personName, history);
@@ -1383,11 +1425,11 @@
 
         /* ===== 问题弹窗逻辑 ===== */
         function showQuestionModal(qText, options = {}) {
-          currentModalOptions = options; 
+          currentModalOptions = options;
           modalQuestion.textContent = qText;
           questionModal.style.display = 'flex';
-          answerForm.reset(); 
-          
+          answerForm.reset();
+
           answererDisplay.textContent = selectedRoller ? selectedRoller.name : '未知玩家';
 
           if (options.isDirectAnswer) {
@@ -1398,23 +1440,23 @@
             willAnswerButtons.classList.add('hidden');
             answerFieldGroup.classList.add('hidden');
             noAnswerOptions.classList.remove('hidden');
-            renderPenaltyOptions(); 
-          } else { 
+            renderPenaltyOptions();
+          } else {
             willAnswerButtons.classList.remove('hidden');
-            answerFieldGroup.classList.add('hidden'); 
-            noAnswerOptions.classList.add('hidden'); 
-            selectedPenalty = ''; 
+            answerFieldGroup.classList.add('hidden');
+            noAnswerOptions.classList.add('hidden');
+            selectedPenalty = '';
             willAnswerButtons.querySelectorAll('.will-answer-btn').forEach(btn => btn.classList.remove('selected'));
-            willAnswerValue = ''; 
-            renderPenaltyOptions(); 
+            willAnswerValue = '';
+            renderPenaltyOptions();
           }
-          
+
           gsap.fromTo(questionModal, { opacity: 0 }, { opacity: 1, duration: 0.2 });
-          window.scrollTo({ top: 0 }); 
+          window.scrollTo({ top: 0 });
         }
 
         function renderPenaltyOptions() {
-          penaltyOptionsContainer.innerHTML = ''; 
+          penaltyOptionsContainer.innerHTML = '';
           const penaltyOptions = [
             { value: 'skip', text: '跳过 (需奖励)' },
             { value: 'penalty_drink', text: '罚酒' },
@@ -1423,7 +1465,7 @@
 
           penaltyOptions.forEach(option => {
             const button = document.createElement('button');
-            button.type = 'button'; 
+            button.type = 'button';
             button.classList.add('penalty-option-btn');
             button.dataset.value = option.value;
             button.textContent = option.text;
@@ -1431,11 +1473,11 @@
             if (option.value === 'skip' &&
                 (!selectedRoller || !playerRewards.has(selectedRoller.name) || !playerRewards.get(selectedRoller.name).skipAnswer)) {
               button.classList.add('disabled');
-              button.disabled = true; 
+              button.disabled = true;
             }
 
             button.addEventListener('click', () => {
-              if (button.disabled) return; 
+              if (button.disabled) return;
               penaltyOptionsContainer.querySelectorAll('.penalty-option-btn').forEach(btn => btn.classList.remove('selected'));
               button.classList.add('selected');
               selectedPenalty = button.dataset.value;
@@ -1453,11 +1495,11 @@
             if (willAnswerValue === 'Yes') {
               answerFieldGroup.classList.remove('hidden');
               noAnswerOptions.classList.add('hidden');
-              selectedPenalty = ''; 
+              selectedPenalty = '';
             } else if (willAnswerValue === 'No') {
               answerFieldGroup.classList.add('hidden');
               noAnswerOptions.classList.remove('hidden');
-              renderPenaltyOptions(); 
+              renderPenaltyOptions();
             }
           }
         });
@@ -1465,54 +1507,54 @@
         answerForm.addEventListener('submit', (e) => {
           e.preventDefault();
           if (!selectedRoller) {
-            showCustomAlert("错误：没有选定的回答者。"); 
+            showCustomAlert("错误：没有选定的回答者。");
             return;
           }
           const who = selectedRoller.name;
           let ans = '';
           let lotteryResultText = '';
-          let answerStatus = ''; 
-          let questionTextForHistory = modalQuestion.textContent; 
+          let answerStatus = '';
+          let questionTextForHistory = modalQuestion.textContent;
 
-          if (currentModalOptions.isDirectAnswer) { 
+          if (currentModalOptions.isDirectAnswer) {
             ans = answerForm.answer.value.trim();
             if (!ans) {
-              showCustomAlert('请输入回答内容！'); 
+              showCustomAlert('请输入回答内容！');
               return;
             }
             answerStatus = 'answered';
             addQuestionToHistory(who, questionTextForHistory);
             lotteryResultText = performLottery(who);
-          } else if (currentModalOptions.isDirectPenalty) { 
+          } else if (currentModalOptions.isDirectPenalty) {
             if (!selectedPenalty) {
-              showCustomAlert('请选择一项惩罚！'); 
+              showCustomAlert('请选择一项惩罚！');
               return;
             }
             const penaltyButton = penaltyOptionsContainer.querySelector(`.penalty-option-btn[data-value="${selectedPenalty}"]`);
-            ans = penaltyButton ? penaltyButton.textContent : selectedPenalty; 
+            ans = penaltyButton ? penaltyButton.textContent : selectedPenalty;
 
             if (selectedPenalty === 'skip') {
               answerStatus = 'skipped';
               if (selectedRoller && playerRewards.has(who) && playerRewards.get(who).skipAnswer) {
                 playerRewards.get(who).skipAnswer = false;
               }
-               lotteryResultText = performLottery(who); 
+              lotteryResultText = performLottery(who);
             } else {
               answerStatus = 'penalized';
               lotteryResultText = "未抽奖 (选择了惩罚)";
             }
             addQuestionToHistory(who, questionTextForHistory);
-          } else { 
+          } else {
             if (willAnswerValue === 'Yes') {
               ans = answerForm.answer.value.trim();
               if (!ans) {
-                showCustomAlert('请输入回答内容！'); 
+                showCustomAlert('请输入回答内容！');
                 return;
               }
               answerStatus = 'answered';
             } else if (willAnswerValue === 'No') {
               if (!selectedPenalty) {
-                showCustomAlert('请选择一项惩罚！'); 
+                showCustomAlert('请选择一项惩罚！');
                 return;
               }
               const penaltyButton = penaltyOptionsContainer.querySelector(`.penalty-option-btn[data-value="${selectedPenalty}"]`);
@@ -1524,10 +1566,10 @@
                   playerRewards.get(who).skipAnswer = false;
                 }
               } else {
-                 answerStatus = 'penalized';
+                answerStatus = 'penalized';
               }
             } else {
-              showCustomAlert('请选择是否作答！'); 
+              showCustomAlert('请选择是否作答！');
               return;
             }
             addQuestionToHistory(who, questionTextForHistory);
@@ -1537,13 +1579,14 @@
               lotteryResultText = "未抽奖 (选择了惩罚)";
             }
           }
-          
+
           const now = new Date();
           const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
           const formattedTime = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-          historyRecords.push({
-            id: Date.now(), 
+          // —— 在本地数组和云端同时保存记录 —— 
+          const recordObj = {
+            id: Date.now(),
             player: who,
             question: questionTextForHistory,
             answer: ans,
@@ -1551,37 +1594,40 @@
             date: formattedDate,
             time: formattedTime,
             lotteryResult: lotteryResultText
-          });
+          };
+          historyRecords.push(recordObj);
+          saveRecordToCloud(recordObj);
           renderHistory();
-          questionModal.style.display = 'none'; 
-          directQuestionDisplay.classList.add('hidden'); 
-          questionScroller.classList.add('hidden'); 
+
+          questionModal.style.display = 'none';
+          directQuestionDisplay.classList.add('hidden');
+          questionScroller.classList.add('hidden');
 
           if (playerRewards.has(who) && playerRewards.get(who).designateAnswerer) {
             pendingDesignationForNextRoll = { active: true, designatedBy: who, originalRoller: who };
-            playerRewards.get(who).designateAnswerer = false; 
+            playerRewards.get(who).designateAnswerer = false;
           }
-          currentModalOptions = {}; 
+          currentModalOptions = {};
         });
 
         /* ===== 抽奖逻辑 ===== */
         function performLottery(playerWhoAnswered) {
-          const randomNumber = Math.random() * 100; 
+          const randomNumber = Math.random() * 100;
           let resultMessage = '';
           let rewardType = null;
 
-          if (randomNumber < 50) { 
+          if (randomNumber < 50) {
             resultMessage = '谢谢参加！';
-          } else if (randomNumber < 50 + 8.33) { 
+          } else if (randomNumber < 50 + 8.33) {
             resultMessage = '恭喜你！下次可以跳过回答！';
             rewardType = 'skipAnswer';
-          } else if (randomNumber < 50 + 8.33 + 16.67) { 
+          } else if (randomNumber < 50 + 8.33 + 16.67) {
             resultMessage = '恭喜你！下局回答完可以指定任何一个人投掷回答！';
             rewardType = 'designateAnswerer';
-          } else if (randomNumber < 50 + 8.33 + 16.67 + 16.67) { 
+          } else if (randomNumber < 50 + 8.33 + 16.67 + 16.67) {
             resultMessage = '恭喜你！下局投掷时可以手动选择点数！';
             rewardType = 'manualDiceEnabled';
-          } else { 
+          } else {
             resultMessage = '恭喜你！可以立马指定某个玩家开始投掷骰子！';
             rewardType = 'immediateDesignation';
           }
@@ -1595,38 +1641,38 @@
             if (rewardType === 'skipAnswer') rewards.skipAnswer = true;
             else if (rewardType === 'designateAnswerer') rewards.designateAnswerer = true;
             else if (rewardType === 'manualDiceEnabled') {
-                rewards.manualDiceEnabled = true;
-                updateManualDiceInputState(); 
+              rewards.manualDiceEnabled = true;
+              updateManualDiceInputState();
             }
             else if (rewardType === 'immediateDesignation') {
-                pendingImmediateDesignation = { active: true, designatedBy: playerWhoAnswered, originalRoller: null };
+              pendingImmediateDesignation = { active: true, designatedBy: playerWhoAnswered, originalRoller: null };
             }
             playerRewards.set(playerWhoAnswered, rewards);
           }
-          return resultMessage; 
+          return resultMessage;
         }
 
-        closeLotteryModalBtn.addEventListener('click', () => { 
+        closeLotteryModalBtn.addEventListener('click', () => {
           lotteryResultModal.style.display = 'none';
           if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy) {
-            pendingImmediateDesignation.originalRoller = selectedRoller; 
-            showDesignateModal(true); 
+            pendingImmediateDesignation.originalRoller = selectedRoller;
+            showDesignateModal(true);
           }
         });
 
 
-        /* ===== 指定玩家弹窗逻辑 ===== */
+        /* ===== 指定玩家弹窗逻辑 ===== */ 
         function showDesignateModal(isImmediate) {
           return new Promise((resolve) => {
             designateModal.style.display = 'flex';
             const designatorName = isImmediate ? pendingImmediateDesignation.designatedBy : pendingDesignationForNextRoll.designatedBy;
 
             if (isImmediate) {
-                designateMessage.textContent = `玩家 ${designatorName} 获得了“立马指定某个玩家开始投掷骰子”的奖励。请选择由谁来开始本局游戏。`;
+              designateMessage.textContent = `玩家 ${designatorName} 获得了“立马指定某个玩家开始投掷骰子”的奖励。请选择由谁来开始本局游戏。`;
             } else {
-                designateMessage.textContent = `玩家 ${designatorName} 获得了“指定下一位回答者”的奖励。请选择由谁来回答本局问题。`;
+              designateMessage.textContent = `玩家 ${designatorName} 获得了“指定下一位回答者”的奖励。请选择由谁来回答本局问题。`;
             }
-            designatePlayerList.innerHTML = ''; 
+            designatePlayerList.innerHTML = '';
 
             currentPlayers.forEach(player => {
               const playerItem = document.createElement('div');
@@ -1638,7 +1684,6 @@
               img.alt = player.name;
               img.onerror = function() { this.onerror=null; this.src='https://placehold.co/40x40/CCCCCC/000?text=User'; };
 
-
               const span = document.createElement('span');
               span.textContent = player.name;
 
@@ -1646,61 +1691,59 @@
               playerItem.appendChild(span);
 
               playerItem.addEventListener('click', () => {
-                selectPlayer(player.name); 
+                selectPlayer(player.name);
                 if (isImmediate) {
-                  pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null }; 
+                  pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
                 } else {
-                  pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null }; 
+                  pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
                 }
                 designateModal.style.display = 'none';
-                resolve(); 
+                resolve();
               });
               designatePlayerList.appendChild(playerItem);
             });
 
-            designateCancelBtn.onclick = () => { 
-                if (isImmediate) {
-                    selectedRoller = pendingImmediateDesignation.originalRoller;
-                    pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-                    if (selectedRoller) selectPlayer(selectedRoller.name); 
-                } else {
-                    selectedRoller = pendingDesignationForNextRoll.originalRoller;
-                    pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
-                    if (selectedRoller) selectPlayer(selectedRoller.name); 
-                }
-                designateModal.style.display = 'none';
-                resolve(); 
+            designateCancelBtn.onclick = () => {
+              if (isImmediate) {
+                selectedRoller = pendingImmediateDesignation.originalRoller;
+                pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
+                if (selectedRoller) selectPlayer(selectedRoller.name);
+              } else {
+                selectedRoller = pendingDesignationForNextRoll.originalRoller;
+                pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
+                if (selectedRoller) selectPlayer(selectedRoller.name);
+              }
+              designateModal.style.display = 'none';
+              resolve();
             };
           });
         }
 
-
         /* ===== 刷新骰子规则弹窗 ===== */
         function populateDiceMapModal() {
-            diceMapList.innerHTML = ''; 
-            for (const [points, mapInfo] of Object.entries(diceMap)) {
-                const listItem = document.createElement('li');
-                listItem.style.padding = '0.5rem 0';
-                listItem.style.borderBottom = '1px dashed #eee';
-                listItem.innerHTML = `<strong>${points} 点:</strong> <span>${mapInfo.label}</span>`;
-                diceMapList.appendChild(listItem);
-            }
+          diceMapList.innerHTML = '';
+          for (const [points, mapInfo] of Object.entries(diceMap)) {
+            const listItem = document.createElement('li');
+            listItem.style.padding = '0.5rem 0';
+            listItem.style.borderBottom = '1px dashed #eee';
+            listItem.innerHTML = `<strong>${points} 点:</strong> <span>${mapInfo.label}</span>`;
+            diceMapList.appendChild(listItem);
+          }
         }
 
         diceMapInfoIcon.addEventListener('click', () => {
-            diceMapModal.style.display = 'flex';
-            gsap.fromTo(diceMapModal, { opacity: 0 }, { opacity: 1, duration: 0.2 });
+          diceMapModal.style.display = 'flex';
+          gsap.fromTo(diceMapModal, { opacity: 0 }, { opacity: 1, duration: 0.2 });
         });
 
-        closeDiceMapModalBtnMain.addEventListener('click', () => { 
-            diceMapModal.style.display = 'none';
+        closeDiceMapModalBtnMain.addEventListener('click', () => {
+          diceMapModal.style.display = 'none';
         });
-
 
         /* ===== 历史记录 & 筛选逻辑 ===== */
         function populatePlayerFilter() {
-          const currentFilterValue = filterPlayerSelect.value; 
-          filterPlayerSelect.innerHTML = '<option value="all">所有玩家</option>'; 
+          const currentFilterValue = filterPlayerSelect.value;
+          filterPlayerSelect.innerHTML = '<option value="all">所有玩家</option>';
           currentPlayers.forEach(player => {
             const option = document.createElement('option');
             option.value = player.name;
@@ -1713,7 +1756,7 @@
         }
 
         function renderHistory() {
-          historyDiv.innerHTML = ''; 
+          historyDiv.innerHTML = '';
           const filterPlayer = filterPlayerSelect.value;
           const filterDate = filterDateSelect.value;
           const filterStatus = filterStatusSelect.value;
@@ -1722,7 +1765,7 @@
             if (filterPlayer !== 'all' && record.player !== filterPlayer) return false;
             if (filterDate === 'today') {
               const today = new Date();
-              const recordDate = new Date(record.date); 
+              const recordDate = new Date(record.date);
               if (recordDate.toDateString() !== today.toDateString()) return false;
             }
             if (filterStatus !== 'all' && record.status !== filterStatus) return false;
@@ -1735,14 +1778,14 @@
           }
 
           filteredRecords.slice().reverse().forEach(record => {
-            const block = document.createElement('details'); 
+            const block = document.createElement('details');
             const summary = document.createElement('summary');
             summary.textContent = `${record.player} · 抽中的问题：${record.question}`;
 
             const p = document.createElement('p');
-            p.style.whiteSpace = 'pre-line'; 
+            p.style.whiteSpace = 'pre-line';
             p.style.fontSize = '0.95rem';
-            p.style.margin = '0.5rem 0'; 
+            p.style.margin = '0.5rem 0';
             p.innerText = `回答者：${record.player}
 是否作答：${record.status === 'answered' ? '是' : (record.status === 'skipped' ? '否 (跳过)' : '否 (惩罚)')}
 回答/惩罚：${record.answer || '（无）'}
@@ -1761,17 +1804,17 @@
 
         /* ===== 启动 ===== */
         initializePlayers();
-
-      })(); 
-    }); 
+      })();
+    });
   </script>
 
+  <!-- ==== 新玩家弹窗 DOM ==== -->
   <div id="newPlayerModal">
     <div id="newPlayerModalCard">
       <span class="close-modal-btn" id="closeNewPlayerModalBtn">&times;</span>
       <h2 style="font-size: 1.3rem; margin-top: 0;">添加新玩家</h2>
       <input type="text" id="newPlayerNameInput" placeholder="输入新玩家名字" />
-      <p id="newPlayerModalMessage" style="font-size: 0.9rem; color: red; margin-bottom: 0.5rem; min-height: 1.2em;"></p> 
+      <p id="newPlayerModalMessage" style="font-size: 0.9rem; color: red; margin-bottom: 0.5rem; min-height: 1.2em;"></p>
       <div class="modal-buttons">
         <button id="confirmAddPlayerBtn">添加</button>
         <button id="cancelAddPlayerBtn" style="background-color: #6c757d; font-size: 1rem; padding: 0.7rem;">取消</button>
