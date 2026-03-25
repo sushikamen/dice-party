@@ -1,1825 +1,332 @@
 <!DOCTYPE html>
-<html lang="zh">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>来掷骰子啦</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-  <style>
-    /* ===== 通用重置 & 变量 ===== */
-    :root {
-      --primary: #6366f1;
-      --bg: #f9fafb;
-      --border-color: #e5e7eb;
-    }
-    * {
-      box-sizing: border-box;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: #333;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
-        Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-      max-width: 100%;
-      width: 100%;
-    }
-    body {
-      padding: 1rem;
-      overflow-x: hidden;
-    }
-    h1 {
-      font-size: 2rem;
-      text-align: center;
-      margin-bottom: 1rem;
-      color: #222;
-    }
-    /* ===== 按钮通用样式 ===== */
-    button {
-      display: inline-block;
-      padding: 0.8rem 1.5rem;
-      border: none;
-      border-radius: 0.5rem;
-      background: var(--primary);
-      color: #fff;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: all 0.2s ease-in-out;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    button:hover {
-      background: #5053e0;
-      transform: translateY(-1px);
-    }
-    button:active {
-      transform: translateY(1px);
-      box-shadow: none;
-    }
-    button[disabled] {
-      opacity: 0.5;
-      cursor: not-allowed;
-      background: #a0a0a0;
-      transform: none;
-      box-shadow: none;
-    }
-    /* ===== 通用区块容器 ===== */
-    .section {
-      width: 100%;
-      background: #fff;
-      border: 1px solid var(--border-color);
-      border-radius: 0.75rem;
-      padding: 1rem;
-      margin-top: 1rem;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
-      position: relative; /* Needed for z-index stacking context */
-    }
-    /* ===== 骰子图标大小 ===== */
-    #dice-face {
-      font-size: 4rem;
-      height: 4rem;
-      line-height: 4rem;
-      margin: 0.5rem 0;
-      display: inline-block;
-      transition: transform 0.1s ease-out;
-    }
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Bluey 小小游戏大厅</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 基础样式文件（严格保留） -->
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app-root">
+      <!-- 顶部 Bluey AI 角色区域 -->
+      <header class="hero">
+        <div class="hero-avatar" aria-hidden="true">
+          <div class="hero-avatar-face">
+            <div class="hero-avatar-ear hero-avatar-ear-left"></div>
+            <div class="hero-avatar-ear hero-avatar-ear-right"></div>
+            <div class="hero-avatar-eye hero-avatar-eye-left"></div>
+            <div class="hero-avatar-eye hero-avatar-eye-right"></div>
+            <div class="hero-avatar-mouth"></div>
+          </div>
+        </div>
+        <div class="hero-text">
+          <div class="hero-name">Bluey · 小小 AI 伙伴</div>
+          <div class="hero-message">"Hooray! Let's play a game!"</div>
+        </div>
+      </header>
 
-    /* ===== 玩家选择横向滚动区 ===== */
-    #playerSelectionContainer {
-      width: 100%;
-      overflow: hidden; 
-      padding-bottom: 0.5rem;
-      display: flex;
-      justify-content: center;
-    }
-    #playerSelection {
-      display: flex;
-      flex-wrap: nowrap;
-      gap: 0.75rem;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-      padding-top: 2px; 
-    }
-    #playerSelection::-webkit-scrollbar {
-      display: none;
-    }
-    .player-card {
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0.6rem;
-      border: 2px solid var(--border-color);
-      border-radius: 0.75rem;
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-      background-color: #fefefe;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      min-width: 80px;
-      height: 100px;
-      justify-content: center;
-    }
-    .player-card:hover {
-      border-color: var(--primary);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .player-card.selected {
-      border-color: var(--primary);
-      background-color: #e0e7ff;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-      transform: scale(1.02); 
-    }
-    .player-card img {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 0.5rem;
-      border: 2px solid #fff;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .player-card span {
-      font-weight: 600;
-      font-size: 1rem;
-      color: #555;
-    }
-    #addPlayerCard {
-      background-color: #f0f4f8;
-      border: 2px dashed var(--border-color);
-      color: #999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      padding: 0.6rem;
-      min-width: 80px;
-      height: 100px;
-    }
-    #addPlayerCard:hover {
-      border-color: var(--primary);
-      color: var(--primary);
-      background-color: #e8eef4;
-      transform: translateY(-2px); 
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    #addPlayerCard .plus-icon {
-      font-size: 2.5rem;
-      line-height: 1;
-    }
+      <!-- Lobby：仅选择动物 + 加入派对 -->
+      <main id="view-lobby" class="lobby" aria-label="Lobby">
+        <!-- 可选动物头像列表 -->
+        <section class="panel panel-animals" aria-label="选择你的动物伙伴">
+          <h2 class="panel-title">选择一个动物伙伴</h2>
+          <div class="animal-list" id="animal-list">
+            <button class="animal-card" data-animal="dog" type="button" aria-pressed="false">
+              <div class="animal-icon" aria-hidden="true">
+                <span class="animal-emoji" aria-hidden="true">🐶</span>
+              </div>
+              <div class="animal-name">小狗</div>
+            </button>
+            <button class="animal-card" data-animal="bear" type="button" aria-pressed="false">
+              <div class="animal-icon" aria-hidden="true">
+                <span class="animal-emoji" aria-hidden="true">🐻</span>
+              </div>
+              <div class="animal-name">小熊</div>
+            </button>
+            <button class="animal-card" data-animal="rabbit" type="button" aria-pressed="false">
+              <div class="animal-icon" aria-hidden="true">
+                <span class="animal-emoji" aria-hidden="true">🐰</span>
+              </div>
+              <div class="animal-name">小兔</div>
+            </button>
+            <button class="animal-card" data-animal="fox" type="button" aria-pressed="false">
+              <div class="animal-icon" aria-hidden="true">
+                <span class="animal-emoji" aria-hidden="true">🦊</span>
+              </div>
+              <div class="animal-name">狐狸</div>
+            </button>
+          </div>
+          <p class="panel-tip">小提示：点一下头像就可以选中，再点一次可以取消。</p>
+        </section>
 
-    /* ===== 新玩家弹窗 ===== */
-    #newPlayerModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.4);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 100;
-    }
-    #newPlayerModalCard {
-      background: #fff;
-      border-radius: 1rem;
-      padding: 2rem;
-      width: 90%;
-      max-width: 320px;
-      text-align: center;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      animation: fadeIn 0.3s ease-out;
-      position: relative;
-    }
-    #newPlayerModalCard input {
-      width: 100%;
-      padding: 0.6rem;
-      border: 1px solid #ccc;
-      border-radius: 0.5rem;
-      margin-bottom: 1rem;
-      font-size: 1rem;
-    }
-    #newPlayerModalCard .modal-buttons {
-      display: flex;
-      gap: 0.8rem;
-      justify-content: center;
-    }
-    #newPlayerModalCard button {
-      flex: 1;
-      font-size: 1rem;
-      padding: 0.7rem;
-    }
+        <section class="panel panel-join" aria-label="加入派对">
+          <button
+            id="btn-join-party"
+            type="button"
+            class="mode-btn"
+            disabled
+            style="width: 100%; justify-content: center; align-items: center; opacity: 0.7; cursor: not-allowed"
+          >
+            <span class="mode-icon" aria-hidden="true">🎉</span>
+            <span class="mode-text" style="align-items: center">
+              <span class="mode-title" style="font-size: 18px">加入派对</span>
+              <span class="mode-subtitle" style="font-size: 13px">你已选择动物后才可开启</span>
+            </span>
+          </button>
+          <p class="panel-tip" id="join-tip">选择一个动物后，按钮会自动变为可用。</p>
+        </section>
+      </main>
 
-    /* ===== “随机选择玩家”按钮 ===== */
-    #randomSelectPlayerBtn {
-      margin-top: 0.8rem;
-      background-color: #17a2b8;
-    }
-    #randomSelectPlayerBtn:hover {
-      background-color: #138496;
-    }
+      <!-- Hall：实时渲染玩家 + 模式选择 -->
+      <main id="view-hall" class="lobby" style="display: none" aria-label="Hall">
+        <section class="panel panel-players" aria-label="已加入的玩家">
+          <h2 class="panel-title">已加入的玩家</h2>
+          <div class="animal-list" id="player-list"></div>
+          <p class="panel-tip" id="hall-tip">房主将为大家出题；点击模式后会询问确认。</p>
+        </section>
 
-    /* ===== 骰子 & 手动输入 ===== */
-    #manualDiceInputGroup {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 0.8rem;
-    }
-    #manualDiceInput {
-      width: 60px;
-      text-align: center;
-      padding: 0.6rem;
-      border: 1px solid #ccc;
-      border-radius: 0.5rem;
-      font-size: 1rem;
-    }
-    #useManualDiceBtn {
-      background-color: #6c757d;
-    }
-    #useManualDiceBtn:hover {
-      background-color: #5a6268;
-    }
-
-    /* ===== 骰子图示与信息图标 ===== */
-    #diceMapInfoIcon {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      width: 28px;
-      height: 28px;
-      background-color: #a0a0a0;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      font-weight: bold;
-      color: #fff;
-      cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      transition: background-color 0.2s ease-in-out;
-      z-index: 5; 
-    }
-    #diceMapInfoIcon:hover {
-      background-color: #888;
-    }
-
-    /* ===== 问题滚动器 (旧逻辑，现在隐藏) ===== */
-    #questionScroller {
-      flex-direction: column;
-      align-items: center;
-      margin-top: 0.8rem;
-    }
-    #questionTypeDisplay_old { 
-      font-size: 2.2rem;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 0.8rem;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-      text-align: center;
-    }
-    #scrollingQuestionWrapper {
-      position: relative;
-      width: 100%;
-      max-width: 100%;
-      height: 3.2em; 
-      overflow: hidden;
-      margin-bottom: 0.8rem;
-    }
-    .scrolling-question-item {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      font-weight: 600;
-      font-size: 1.4rem;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      color: #333;
-      padding: 0 1rem;
-      opacity: 0;
-    }
-
-    /* ===== 直接问题显示区 (新主要逻辑) ===== */
-    #directQuestionDisplay {
-      flex-direction: column;
-      align-items: center;
-      margin-top: 0.8rem;
-      padding: 1rem;
-      text-align: center;
-    }
-    #directQuestionText {
-      font-size: 1.5rem; 
-      font-weight: 600;
-      margin-bottom: 1.5rem; 
-      min-height: 3em; 
-      color: #333;
-    }
-    #directQuestionActions {
-      display: flex;
-      gap: 1rem; /* Increased gap */
-      justify-content: center;
-      flex-wrap: wrap; 
-    }
-    #directQuestionActions button {
-      padding: 0.7rem 1.2rem; 
-    }
-    #changeQuestionBtn {
-      background-color: #f59e0b; 
-    }
-    #changeQuestionBtn:hover {
-      background-color: #d97706; 
-    }
-    #directAnswerBtn { /* Color for "作答" */
-      background-color: #22c55e; 
-    }
-    #directAnswerBtn:hover {
-      background-color: #16a34a; 
-    }
-    #directPenaltyBtn { /* Color for "接受惩罚" */
-      background-color: #ef4444; 
-    }
-    #directPenaltyBtn:hover {
-      background-color: #dc2626; 
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* ===== 模态弹窗（问题/指定/抽奖） ===== */
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(-20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    #questionModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.4);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 50; 
-    }
-    #modalCard {
-      background: #fff;
-      border-radius: 1rem;
-      padding: 2rem;
-      width: 90%;
-      max-width: 480px;
-      text-align: left;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      animation: fadeIn 0.3s ease-out;
-      position: relative; 
-    }
-    .close-modal-btn {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 1.8rem;
-      font-weight: bold;
-      color: #888;
-      cursor: pointer;
-      line-height: 1;
-    }
-    .close-modal-btn:hover {
-      color: #333;
-    }
-    #modalCard h2 {
-      margin-top: 0;
-      font-size: 1.5rem;
-      color: #222;
-    }
-    #answerForm label {
-      display: block;
-      margin: 0.5rem 0 0.2rem;
-      font-weight: 600;
-      font-size: 1rem;
-    }
-    #answerForm textarea {
-      width: 100%;
-      padding: 0.6rem;
-      border: 1px solid #ccc;
-      border-radius: 0.5rem;
-      margin-bottom: 0.5rem;
-      font-size: 1rem;
-      min-height: 80px;
-      resize: vertical;
-    }
-    select,
-    input[type="text"] {
-      width: 100%;
-      padding: 0.6rem;
-      border: 1px solid #ccc;
-      border-radius: 0.3rem;
-      margin-bottom: 0.5rem;
-      font-size: 1rem;
-    }
-    details {
-      margin-top: 1rem;
-      text-align: left;
-      border: 1px solid #e5e7eb;
-      padding: 0.6rem;
-      border-radius: 0.5rem;
-      background: #fff;
-    }
-    summary {
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 1rem;
-    }
-
-    /* ===== 指定 & 抽奖模态框 ===== */
-    #designateModal,
-    #lotteryResultModal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.4);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 60; 
-    }
-    #designateModalCard,
-    #lotteryResultModalCard {
-      background: #fff;
-      border-radius: 1rem;
-      padding: 2rem;
-      width: 90%;
-      max-width: 400px;
-      text-align: center;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      animation: fadeIn 0.3s ease-out;
-      position: relative;
-    }
-    #designateModalCard h2,
-    #lotteryResultModalCard h2 {
-      margin-top: 0;
-      font-size: 1.4rem;
-      color: var(--primary);
-    }
-    #designatePlayerList {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.75rem;
-      margin-top: 1rem;
-    }
-    .designate-player-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0.5rem;
-      border: 1px solid var(--border-color);
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-    }
-    .designate-player-item:hover {
-      background-color: #f0f0f0;
-      border-color: var(--primary);
-    }
-    .designate-player-item img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 0.3rem;
-    }
-    .designate-player-item span {
-      font-size: 0.9rem;
-    }
-
-    /* ===== 惩罚 & 回答按钮组 (in modal) ===== */
-    #willAnswerButtons {
-      display: flex;
-      gap: 0.8rem;
-      margin-top: 0.5rem;
-      margin-bottom: 1rem;
-      justify-content: center;
-    }
-    .will-answer-btn {
-      flex: 1;
-      max-width: 100px;
-      padding: 0.7rem;
-      border: 1px solid var(--border-color);
-      border-radius: 0.5rem;
-      background-color: #f0f0f0;
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-      font-weight: 600;
-      font-size: 1rem;
-      color: #555;
-      text-align: center;
-    }
-    .will-answer-btn:hover {
-      background-color: #e0e0e0;
-    }
-    .will-answer-btn.selected {
-      background-color: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    }
-
-    /* ===== 惩罚选项按钮 (in modal) ===== */
-    #penaltyOptionsContainer {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
-      margin-top: 0.5rem;
-      justify-content: center;
-    }
-    .penalty-option-btn {
-      padding: 0.6rem 1.2rem;
-      border: 1px solid #ccc;
-      border-radius: 0.5rem;
-      background-color: #f8f8f8;
-      cursor: pointer;
-      transition: all 0.2s ease-in-out;
-      font-size: 0.95rem;
-      color: #333;
-    }
-    .penalty-option-btn:hover {
-      background-color: #e8e8e8;
-      border-color: #999;
-    }
-    .penalty-option-btn.selected {
-      background-color: #f44336;
-      color: #fff;
-      border-color: #d32f2f;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    }
-    .penalty-option-btn.disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    /* ===== 筛选器：历史记录 ===== */
-    .history-filters {
-      display: flex;
-      gap: 0.5rem; /* Reduced gap for tighter horizontal layout */
-      margin-bottom: 1rem;
-      justify-content: space-between;
-      align-items: center;
-      position: relative; 
-      z-index: 5;      
-    }
-    .history-filters > div { 
-      position: relative; 
-      z-index: 10; 
-      flex: 1; /* Distribute space among filter groups */
-      min-width: 80px; /* Prevent them from becoming too small */
-    }
-    .history-filters label { /* Default label style for larger screens */
-      font-weight: 600;
-      color: #555;
-      margin-bottom: 0.3rem; /* Add some space if labels are above selects */
-      font-size: 1rem;
-      display: block; /* Labels above selects by default */
-    }
-    .history-filters select {
-      padding: 0.6rem;
-      border: 1px solid #ccc;
-      border-radius: 0.5rem;
-      background-color: #fff;
-      font-size: 0.9rem; /* Slightly smaller font for select on mobile */
-      width: 100%; /* Select takes full width of its parent div */
-      position: relative; 
-      z-index: 15; 
-    }
-    #history {
-      position: relative;
-      z-index: 1; 
-    }
-
-    @media screen and (max-width: 480px) {
-      .history-filters {
-        flex-direction: row; /* Ensure horizontal layout on mobile */
-        flex-wrap: nowrap; /* Prevent wrapping to ensure single line */
-        gap: 0.5rem; /* Adjust gap for mobile if needed */
-      }
-      .history-filters label {
-        display: none; /* Hide labels on mobile to save space */
-      }
-      .history-filters > div {
-        margin-bottom: 0; /* Remove bottom margin when in a row */
-      }
-      .history-filters select {
-        font-size: 0.8rem; /* Even smaller font if needed for very small screens */
-        padding: 0.5rem 0.3rem; /* Adjust padding for smaller selects */
-      }
-    }
-
-    /* Dice Map Modal specific close button */
-    #diceMapModalCard .close-modal-btn {
-      position: absolute;
-      top: 10px;
-      right: 15px;
-      font-size: 1.8rem;
-      font-weight: bold;
-      color: #888;
-      cursor: pointer;
-      line-height: 1;
-    }
-    #diceMapModalCard .close-modal-btn:hover {
-      color: #333;
-    }
-  </style>
-
-  <!-- ===== Firebase 兼容版 SDK（compat） ===== -->
-  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore-compat.js"></script>
-
-  <!-- ===== Firebase 初始化 & 全局记录同步 ===== -->
-  <script>
-    // —— 1. Firebase 初始化（公共模式：所有用户共用 records 集合） —— 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDJutaK4LkYI5mZbK9efUPW6if6GVpJes0",
-      authDomain: "party-dice-727e5.firebaseapp.com",
-      projectId: "party-dice-727e5",
-      storageBucket: "party-dice-727e5.firebasestorage.app",
-      messagingSenderId: "710313413804",
-      appId: "1:710313413804:web:34b5390e86e3d8ec246309"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    // 离线缓存
-    db.enableIndexedDbPersistence().catch(() => {});
-
-    // 保存记录到公共集合 'records'
-    function saveRecordToCloud(record) {
-      db.collection('records').add({
-        ...record,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    }
-
-    // 实时监听集合 'records'，并更新本地 historyRecords
-    db.collection('records')
-      .orderBy('createdAt', 'desc')
-      .onSnapshot(snapshot => {
-        historyRecords.length = 0;
-        snapshot.forEach(doc => historyRecords.push(doc.data()));
-        if (typeof renderHistory === 'function') {
-          renderHistory();
-        }
-      });
-  </script>
-</head>
-<body>
-  <h1>来掷骰子啦</h1>
-
-  <!-- ==== 选择玩家区 ==== -->
-  <div class="section">
-    <p style="font-weight: 600; margin-bottom: 0.8rem; text-align: center;">请选择掷骰子的玩家：</p>
-    <div id="playerSelectionContainer">
-      <div id="playerSelection"></div>
+        <section class="panel panel-modes" aria-label="选择游戏模式">
+          <h2 class="panel-title">选择一个游戏模式</h2>
+          <div class="mode-list" id="mode-list">
+            <button class="mode-btn" type="button" data-mode="A" aria-label="智商滑铁卢：有趣的冷知识挑战">
+              <span class="mode-icon" aria-hidden="true">🧠</span>
+              <span class="mode-text">
+                <span class="mode-title">智商滑铁卢</span>
+                <span class="mode-subtitle">有趣的冷知识挑战</span>
+              </span>
+            </button>
+            <button class="mode-btn" type="button" data-mode="B" aria-label="真心话雷达：谁在撒谎？">
+              <span class="mode-icon" aria-hidden="true">💬</span>
+              <span class="mode-text">
+                <span class="mode-title">真心话雷达</span>
+                <span class="mode-subtitle">谁在撒谎？</span>
+              </span>
+            </button>
+            <button class="mode-btn" type="button" data-mode="C" aria-label="卧室大冒险：温馨懒散的小挑战">
+              <span class="mode-icon" aria-hidden="true">🏠</span>
+              <span class="mode-text">
+                <span class="mode-title">卧室大冒险</span>
+                <span class="mode-subtitle">温馨懒散的小挑战</span>
+              </span>
+            </button>
+            <button class="mode-btn" type="button" data-mode="D" aria-label="戏精上身：AI 评选最传神的表演">
+              <span class="mode-icon" aria-hidden="true">⭐</span>
+              <span class="mode-text">
+                <span class="mode-title">戏精上身</span>
+                <span class="mode-subtitle">Shuffle：A/B/C 随机出题</span>
+              </span>
+            </button>
+          </div>
+          <p class="panel-tip">模式 A 需要至少 1 人；B/C/D 需要至少 2 人。</p>
+        </section>
+      </main>
     </div>
-    <p id="addPlayerMessage" class="hidden" style="font-size: 0.9rem; color: green; margin-top: 0.5rem;"></p>
-    <div style="text-align: center; margin-top: 0.8rem;">
-      <button id="randomSelectPlayerBtn">随机选择玩家</button>
-    </div>
-  </div>
 
-  <!-- ==== 掷骰子 & 手动输入区 ==== -->
-  <div class="section" style="margin-top: 1rem;">
-    <div style="text-align: center;">
-      <button id="rollBtn" disabled>掷骰子</button>
-      <span id="dice-face">⚀</span>
-    </div>
-    <p id="dice-result" style="text-align: center; margin-top: 0.5rem;"></p>
-    <div id="manualDiceInputGroup">
-      <input type="number" id="manualDiceInput" min="1" max="6" placeholder="1～6" disabled />
-      <button id="useManualDiceBtn" disabled>使用手动点数</button>
-    </div>
-    <div id="diceMapInfoIcon">?</div>
-  </div>
-
-  <!-- ==== 滚动问题区（旧逻辑，现已隐藏） ==== -->
-  <div id="questionScroller" class="section hidden"> 
-    <p id="questionTypeDisplay_old"></p> 
-    <div id="scrollingQuestionWrapper">
-      <div class="scrolling-question-item" id="scrollingQuestion1"></div>
-      <div class="scrolling-question-item" id="scrollingQuestion2"></div>
-    </div>
-    <div style="display: flex; gap: 0.8rem; justify-content: center;">
-      <button id="startStopScrollBtn">开始滚动</button>
-      <button id="selectQuestionBtn" disabled>选择问题</button>
-    </div>
-  </div>
-
-  <!-- ==== 直接问题显示区（新逻辑） ==== -->
-  <div id="directQuestionDisplay" class="section hidden">
-    <p id="questionTypeDisplay"></p> 
-    <p id="directQuestionText"></p>
-    <div id="directQuestionActions">
-      <button id="changeQuestionBtn">换题 (<span id="changeQuestionAttemptsLeft">2</span>)</button>
-      <button id="directPenaltyBtn">惩罚</button>
-      <button id="directAnswerBtn">作答</button>
-    </div>
-  </div>
-
-  <!-- ==== 历史记录区 ==== -->
-  <div class="section" style="margin-top: 1rem; z-index: 1;"> 
-    <h2 style="font-size: 1.3rem; margin-bottom: 0.6rem; text-align: center;">历史记录</h2>
-    <div class="history-filters">
-      <div>
-        <label for="filterPlayer">玩家:</label>
-        <select id="filterPlayer">
-          <option value="all">所有玩家</option>
-        </select>
-      </div>
-      <div>
-        <label for="filterDate">日期:</label>
-        <select id="filterDate">
-          <option value="all">所有时间</option>
-          <option value="today">今天</option>
-        </select>
-      </div>
-      <div>
-        <label for="filterStatus">状态:</label>
-        <select id="filterStatus">
-          <option value="all">所有状态</option>
-          <option value="answered">已作答</option>
-          <option value="skipped">已跳过</option>
-          <option value="penalized">已惩罚</option>
-        </select>
+    <!-- 确认开局 Modal -->
+    <div
+      class="modal-overlay"
+      id="modal-confirm-start"
+      role="dialog"
+      aria-hidden="true"
+      aria-modal="true"
+    >
+      <div class="modal-content">
+        <button type="button" class="modal-close" id="modal-confirm-start-close" aria-label="关闭确认">
+          ×
+        </button>
+        <h2 class="modal-title" id="modal-confirm-start-title">
+          <span class="modal-mode-icon" aria-hidden="true">🎬</span>
+          开启派对？
+        </h2>
+        <p class="modal-question" id="modal-confirm-start-text">确认后会同步跳转到对应游戏界面。</p>
+        <div class="modal-options" style="margin-bottom: 0">
+          <button type="button" class="modal-option" id="btn-confirm-start" data-option="confirm">
+            <span class="modal-option-label">✓</span>
+            <span class="modal-option-text">确认开启</span>
+          </button>
+          <button type="button" class="modal-option" id="btn-cancel-start" data-option="cancel">
+            <span class="modal-option-label">×</span>
+            <span class="modal-option-text">再想想</span>
+          </button>
+        </div>
       </div>
     </div>
-    <div id="history" style="font-size: 0.95rem; text-align: center;">
-      没有符合条件的记录。
+
+    <!-- 游戏暂停 Modal -->
+    <div
+      class="modal-overlay"
+      id="modal-game-paused"
+      role="dialog"
+      aria-hidden="true"
+      aria-modal="true"
+    >
+      <div class="modal-content">
+        <button
+          type="button"
+          class="modal-close"
+          id="modal-game-paused-close"
+          aria-label="关闭暂停弹窗"
+        >
+          ×
+        </button>
+        <h2 class="modal-title" id="modal-game-paused-title">
+          <span class="modal-mode-icon" aria-hidden="true">⏸</span>
+          游戏已暂停
+        </h2>
+        <p class="modal-question" id="modal-game-paused-text">当前已中止本轮操作，请选择继续或返回大厅。</p>
+        <div class="modal-options" style="margin-bottom: 0">
+          <button type="button" class="modal-option" id="btn-pause-continue" data-option="continue">
+            <span class="modal-option-label">▶</span>
+            <span class="modal-option-text">继续</span>
+          </button>
+          <button type="button" class="modal-option" id="btn-pause-return-hall" data-option="return">
+            <span class="modal-option-label">🏠</span>
+            <span class="modal-option-text">返回大厅</span>
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <!-- ==== 问题弹窗 ==== -->
-  <div id="questionModal">
-    <div id="modalCard">
-      <span class="close-modal-btn" id="closeQuestionModalBtn">&times;</span>
-      <h2 id="modalQuestion"></h2>
-      <form id="answerForm">
-        <label for="answererDisplay">回答者</label>
-        <p id="answererDisplay" style="font-weight: 600; font-size: 1rem; margin-bottom: 1rem; color: #555;"></p>
+    <!-- Mode A：智商滑铁卢 弹窗（默认隐藏） -->
+    <div class="modal-overlay" id="modal-mode-a" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal-content">
+        <button
+          type="button"
+          class="modal-close"
+          id="modal-mode-a-abort"
+          aria-label="中止本轮"
+          style="width: auto; padding: 0 10px; font-size: 14px; font-weight: 900"
+        >
+          中止
+        </button>
+        <h2 class="modal-title" id="modal-mode-a-title">
+          <span class="modal-mode-icon" aria-hidden="true">🧠</span>
+          智商滑铁卢
+        </h2>
+        <p class="modal-subtitle">有趣的冷知识挑战</p>
+        <p class="modal-question" id="modal-mode-a-question">正在生成百科小冷知识题目……</p>
 
-        <div id="willAnswerButtons"> 
-          <label>是否作答</label>
-          <button type="button" class="will-answer-btn" data-value="Yes">是</button>
-          <button type="button" class="will-answer-btn" data-value="No">否</button>
+        <div class="modal-feedback" id="modal-mode-a-feedback" aria-live="polite" style="display: none"></div>
+        <div class="modal-waiting" id="modal-mode-a-waiting" style="display: none">
+          等待其他玩家完成……
+        </div>
+        <div class="modal-results" id="modal-mode-a-results" style="display: none">
+          <h3 class="modal-results-title">答题结果</h3>
+          <div class="modal-results-list" id="modal-mode-a-results-list"></div>
+          <div class="modal-decode">
+            <div class="modal-decode-label">进一步科普（解密）</div>
+            <p class="modal-decode-text" id="modal-mode-a-decode"></p>
+          </div>
         </div>
 
-        <div id="answerFieldGroup" class="hidden"> 
-          <label for="answer">回答内容</label>
-          <textarea id="answer" placeholder="在此输入答案…"></textarea>
+        <div class="modal-options" id="modal-mode-a-options">
+          <button type="button" class="modal-option" data-option="A">
+            <span class="modal-option-label">A</span>
+            <span class="modal-option-text"></span>
+          </button>
+          <button type="button" class="modal-option" data-option="B">
+            <span class="modal-option-label">B</span>
+            <span class="modal-option-text"></span>
+          </button>
+          <button type="button" class="modal-option" data-option="C">
+            <span class="modal-option-label">C</span>
+            <span class="modal-option-text"></span>
+          </button>
+          <button type="button" class="modal-option" data-option="D">
+            <span class="modal-option-label">D</span>
+            <span class="modal-option-text"></span>
+          </button>
         </div>
 
-        <div id="noAnswerOptions" class="hidden"> 
-          <label>选择惩罚：</label>
-          <div id="penaltyOptionsContainer"></div>
-        </div>
-
-        <div style="text-align: center; margin-top: 1rem;">
-          <button type="submit" style="width: 100%;">保存记录</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ==== 指定回答者弹窗 ==== -->
-  <div id="designateModal">
-    <div id="designateModalCard">
-      <span class="close-modal-btn" id="closeDesignateModalBtn">&times;</span>
-      <h2>指定玩家</h2>
-      <p id="designateMessage" style="font-size: 1rem; margin-bottom: 1rem;"></p>
-      <div id="designatePlayerList"></div>
-      <button id="designateCancelBtn" style="margin-top: 1rem; background-color: #6c757d; width: 100%; font-size: 1rem; padding: 0.7rem;">取消指定</button>
-    </div>
-  </div>
-
-  <!-- ==== 抽奖结果弹窗 ==== -->
-  <div id="lotteryResultModal">
-    <div id="lotteryResultModalCard">
-      <span class="close-modal-btn" id="closeLotteryResultModalBtn">&times;</span>
-      <h2>抽奖结果</h2>
-      <p id="lotteryMessage" style="font-size: 1rem; margin: 0.8rem 0;"></p>
-      <button id="closeLotteryModalBtn" style="background-color: #6c757d; width: 100%; font-size: 1rem; padding: 0.7rem;">好的</button>
-    </div>
-  </div>
-
-  <!-- ==== 骰子规则弹窗 ==== -->
-  <div id="diceMapModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 100;">
-    <div id="diceMapModalCard" style="background: #fff; border-radius: 1rem; padding: 2rem; width: 90%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative;">
-      <span class="close-modal-btn" id="closeDiceMapModalBtnLegacy">&times;</span>
-      <h2 style="text-align: center; margin-top: 0; font-size: 1.3rem; color: var(--primary);">骰子点数与问题类型</h2>
-      <ul id="diceMapList" style="list-style: none; padding: 0; margin: 1rem 0; font-size: 1rem; line-height: 1.5;"></ul>
-      <div style="text-align: center; margin-top: 1rem;">
-        <button id="closeDiceMapModalBtnMain" style="background-color: #6c757d; font-size: 1rem; padding: 0.7rem; width: 100%;">关闭</button>
+        <div class="modal-countdown" id="modal-mode-a-countdown">20</div>
+        <p class="modal-countdown-label" id="modal-mode-a-countdown-label">秒后自动结束</p>
       </div>
     </div>
-  </div>
 
-  <!-- ===== 主逻辑 JS 区 ===== -->
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      (function() {
-        /* ===== 问题库 & 映射表 ===== */
-        const questionBank = {
-          emotional_basic: [
-            { text: "你今天最真实的情绪是什么？" },
-            { text: "最近一次感动你的瞬间？" },
-            { text: "想到童年最温暖的回忆？" },
-          ],
-          emotional_pro: [
-            { text: "描述一次让你彻底崩溃又重生的经历。你如何从废墟中重建自我？" },
-            { text: "你对亲密关系中界限的看法？有没有曾因界限不清而受伤？" },
-            { text: "当你感到深深孤独时如何自处？是寻求陪伴还是享受独处？" },
-          ],
-          hobby_basic: [
-            { text: "你最喜欢的休闲活动？" },
-            { text: "最近入坑的兴趣是什么？" },
-            { text: "如果有一天假期，你会做什么？" },
-          ],
-          hobby_pro: [
-            { text: "你培养过最独特的爱好是什么？" },
-            { text: "如果时间和金钱无限，你想深入研究哪个爱好？" },
-            { text: "你的爱好如何影响了你的生活或性格？" },
-          ],
-          quirky_basic: [
-            { text: "如果你是蔬菜，你觉得自己是哪一种？为什么？" },
-            { text: "手机里最奇怪的照片？可以描述一下吗？" },
-            { text: "一个毫无意义但让你快乐的小事实？" },
-          ],
-          quirky_pro: [
-            { text: "给一条金鱼写墓志铭会写什么？你希望它被记住什么？" },
-            { text: "如果世界颜色消失你选留哪一种？为什么？" },
-            { text: "如果你能和一种动物无障碍交流一天，你会选谁，聊什么？" }
-          ]
-        };
-
-        const diceMap = {
-          1: { key: 'emotional_basic', label: '情感问题 · Basic' },
-          4: { key: 'emotional_pro', label: '情感问题 · Pro' },
-          2: { key: 'hobby_basic', label: '兴趣爱好 · Basic' },
-          5: { key: 'hobby_pro', label: '兴趣爱好 · Pro' },
-          3: { key: 'quirky_basic', label: '古怪问题 · Basic' },
-          6: { key: 'quirky_pro', label: '古怪问题 · Pro' }
-        };
-
-        /* ===== 玩家 & 状态数据 ===== */
-        const defaultPlayers = [
-          { name: 'Alex', avatar: 'https://placehold.co/60x60/FFD700/000?text=A', deletable: false },
-          { name: 'Joyce', avatar: 'https://placehold.co/60x60/90EE90/000?text=J', deletable: false },
-          { name: 'Rachel', avatar: 'https://placehold.co/60x60/ADD8E6/000?text=R', deletable: false },
-          { name: 'Sanchez', avatar: 'https://placehold.co/60x60/DDA0DD/000?text=S', deletable: false }
-        ];
-        let currentPlayers = [...defaultPlayers];
-        const historyRecords = [];
-        const personQuestionHistory = new Map();
-        const playerRewards = new Map();
-        let selectedRoller = null;
-
-        let currentModalOptions = {};
-
-        let currentDirectQuestion = null;
-        let currentDirectBankKey = '';
-        let directChangeAttemptsLeft = 0;
-
-        let willAnswerValue = '';
-        let selectedPenalty = '';
-        let pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
-        let pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-        let longPressTimer;
-        const LONG_PRESS_THRESHOLD = 1000;
-
-        /* ===== DOM 引用 ===== */
-        const playerSelectionContainer = document.getElementById('playerSelectionContainer');
-        const playerSelection = document.getElementById('playerSelection');
-        const addPlayerMessage = document.getElementById('addPlayerMessage');
-        const randomSelectPlayerBtn = document.getElementById('randomSelectPlayerBtn');
-
-        const rollBtn = document.getElementById('rollBtn');
-        const diceFace = document.getElementById('dice-face');
-        const diceResult = document.getElementById('dice-result');
-        const manualDiceInputGroup = document.getElementById('manualDiceInputGroup');
-        const manualDiceInput = document.getElementById('manualDiceInput');
-        const useManualDiceBtn = document.getElementById('useManualDiceBtn');
-        const diceMapInfoIcon = document.getElementById('diceMapInfoIcon');
-        const diceMapModal = document.getElementById('diceMapModal');
-        const diceMapList = document.getElementById('diceMapList');
-        const closeDiceMapModalBtnLegacy = document.getElementById('closeDiceMapModalBtnLegacy');
-        const closeDiceMapModalBtnMain = document.getElementById('closeDiceMapModalBtnMain');
-
-        const questionScroller = document.getElementById('questionScroller');
-
-        const directQuestionDisplay = document.getElementById('directQuestionDisplay');
-        const questionTypeDisplay = document.getElementById('questionTypeDisplay');
-        const directQuestionText = document.getElementById('directQuestionText');
-        const directQuestionActions = document.getElementById('directQuestionActions');
-        const changeQuestionBtn = document.getElementById('changeQuestionBtn');
-        const changeQuestionAttemptsLeftSpan = document.getElementById('changeQuestionAttemptsLeft');
-        const directAnswerBtn = document.getElementById('directAnswerBtn');
-        const directPenaltyBtn = document.getElementById('directPenaltyBtn');
-
-        const historyDiv = document.getElementById('history');
-        const filterPlayerSelect = document.getElementById('filterPlayer');
-        const filterDateSelect = document.getElementById('filterDate');
-        const filterStatusSelect = document.getElementById('filterStatus');
-
-        const questionModal = document.getElementById('questionModal');
-        const modalQuestion = document.getElementById('modalQuestion');
-        const answerForm = document.getElementById('answerForm');
-        const answererDisplay = document.getElementById('answererDisplay');
-        const willAnswerButtons = document.getElementById('willAnswerButtons');
-        const answerFieldGroup = document.getElementById('answerFieldGroup');
-        const noAnswerOptions = document.getElementById('noAnswerOptions');
-        const penaltyOptionsContainer = document.getElementById('penaltyOptionsContainer');
-        const closeQuestionModalBtn = document.getElementById('closeQuestionModalBtn');
-
-        const designateModal = document.getElementById('designateModal');
-        const designateMessage = document.getElementById('designateMessage');
-        const designatePlayerList = document.getElementById('designatePlayerList');
-        const designateCancelBtn = document.getElementById('designateCancelBtn');
-        const closeDesignateModalBtn = document.getElementById('closeDesignateModalBtn');
-
-        const lotteryResultModal = document.getElementById('lotteryResultModal');
-        const lotteryMessage = document.getElementById('lotteryMessage');
-        const closeLotteryModalBtn = document.getElementById('closeLotteryModalBtn');
-        const closeLotteryResultModalBtn = document.getElementById('closeLotteryResultModalBtn');
-
-        /* ===== 初始化 ===== */
-        function initializePlayers() {
-          currentPlayers.forEach((player) => {
-            playerRewards.set(player.name, {
-              skipAnswer: false,
-              designateAnswerer: false,
-              manualDiceEnabled: false
-            });
-          });
-          renderPlayerCards();
-          populatePlayerFilter();
-          renderHistory();
-          populateDiceMapModal();
-          setupDirectQuestionListeners();
-          setupModalCloseButtons();
-        }
-
-        function setupModalCloseButtons() {
-          if (closeQuestionModalBtn) {
-            closeQuestionModalBtn.addEventListener('click', () => {
-              questionModal.style.display = 'none';
-            });
-          }
-          if (closeDesignateModalBtn) {
-            closeDesignateModalBtn.addEventListener('click', () => {
-              designateModal.style.display = 'none';
-              if (pendingImmediateDesignation.active) {
-                selectedRoller = pendingImmediateDesignation.originalRoller;
-                pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-                if (selectedRoller) selectPlayer(selectedRoller.name);
-              }
-              if (pendingDesignationForNextRoll.active) {
-                selectedRoller = pendingDesignationForNextRoll.originalRoller;
-                pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
-                if (selectedRoller) selectPlayer(selectedRoller.name);
-              }
-            });
-          }
-          if (closeLotteryResultModalBtn) {
-            closeLotteryResultModalBtn.addEventListener('click', () => {
-              lotteryResultModal.style.display = 'none';
-              if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy) {
-                pendingImmediateDesignation.originalRoller = selectedRoller;
-                showDesignateModal(true);
-              }
-            });
-          }
-          if (closeDiceMapModalBtnLegacy) {
-            closeDiceMapModalBtnLegacy.addEventListener('click', () => {
-              diceMapModal.style.display = 'none';
-            });
-          }
-          const closeNewPlayerModalBtn = document.getElementById('closeNewPlayerModalBtn');
-          if (closeNewPlayerModalBtn) {
-            closeNewPlayerModalBtn.addEventListener('click', () => {
-              document.getElementById('newPlayerModal').style.display = 'none';
-            });
-          }
-        }
-
-        function renderPlayerCards() {
-          playerSelection.innerHTML = '';
-          currentPlayers.forEach((player) => {
-            const playerCard = document.createElement('div');
-            playerCard.classList.add('player-card');
-            playerCard.dataset.name = player.name;
-
-            const img = document.createElement('img');
-            img.src = player.avatar;
-            img.alt = player.name;
-            img.onerror = function() {
-              this.onerror = null;
-              this.src = 'https://placehold.co/60x60/CCCCCC/000?text=User';
-            };
-
-            const span = document.createElement('span');
-            span.textContent = player.name;
-
-            playerCard.appendChild(img);
-            playerCard.appendChild(span);
-
-            if (player.deletable !== false) {
-              playerCard.addEventListener('mousedown', (e) => {
-                if (e.button === 0) {
-                  longPressTimer = setTimeout(() => {
-                    deletePlayer(player.name);
-                    longPressTimer = null;
-                  }, LONG_PRESS_THRESHOLD);
-                }
-              });
-              playerCard.addEventListener('mouseup', () => {
-                if (longPressTimer) {
-                  clearTimeout(longPressTimer);
-                  longPressTimer = null;
-                  selectPlayer(player.name);
-                }
-              });
-              playerCard.addEventListener('mouseleave', () => {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-              });
-              playerCard.addEventListener('touchstart', (e) => {
-                longPressTimer = setTimeout(() => {
-                  deletePlayer(player.name);
-                  longPressTimer = null;
-                }, LONG_PRESS_THRESHOLD);
-              }, { passive: true });
-              playerCard.addEventListener('touchend', () => {
-                if (longPressTimer) {
-                  clearTimeout(longPressTimer);
-                  longPressTimer = null;
-                  selectPlayer(player.name);
-                }
-              });
-              playerCard.addEventListener('touchcancel', () => {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-              });
-            } else {
-              playerCard.addEventListener('click', () => {
-                selectPlayer(player.name);
-              });
-            }
-            playerSelection.appendChild(playerCard);
-          });
-
-          const addPlayerCard = document.createElement('div');
-          addPlayerCard.id = 'addPlayerCard';
-          addPlayerCard.classList.add('player-card');
-          addPlayerCard.innerHTML = '<span class="plus-icon">+</span>';
-          addPlayerCard.addEventListener('click', () => {
-            document.getElementById('newPlayerModal').style.display = 'flex';
-            document.getElementById('newPlayerNameInput').focus();
-          });
-          playerSelection.appendChild(addPlayerCard);
-
-          if (selectedRoller) {
-            const currentSelectedCard = document.querySelector(`.player-card[data-name="${selectedRoller.name}"]`);
-            if (currentSelectedCard) {
-              currentSelectedCard.classList.add('selected');
-            } else {
-              selectedRoller = null;
-              rollBtn.disabled = true;
-            }
-          } else {
-            rollBtn.disabled = true;
-          }
-        }
-
-        function selectPlayer(name) {
-          document.querySelectorAll('.player-card').forEach((card) => {
-            card.classList.remove('selected');
-          });
-          const selectedCard = document.querySelector(`.player-card[data-name="${name}"]`);
-          if (selectedCard) {
-            selectedCard.classList.add('selected');
-            gsap.fromTo(selectedCard, { scale: 1 }, { scale: 1.02, duration: 0.1, yoyo: true, repeat: 1 });
-          }
-          selectedRoller = currentPlayers.find((p) => p.name === name);
-          rollBtn.disabled = false;
-          updateManualDiceInputState();
-        }
-
-        function deletePlayer(nameToDelete) {
-          const playerToDelete = currentPlayers.find(p => p.name === nameToDelete);
-          if (playerToDelete && playerToDelete.deletable === false) {
-            showCustomAlert('此玩家不能被删除。');
-            return;
-          }
-          showCustomConfirm(`确定要删除玩家 "${nameToDelete}" 吗？`, () => {
-            currentPlayers = currentPlayers.filter((p) => p.name !== nameToDelete);
-            personQuestionHistory.delete(nameToDelete);
-            playerRewards.delete(nameToDelete);
-            renderPlayerCards();
-            populatePlayerFilter();
-            for (let i = historyRecords.length - 1; i >= 0; i--) {
-              if (historyRecords[i].player === nameToDelete) {
-                historyRecords.splice(i, 1);
-              }
-            }
-            renderHistory();
-            if (selectedRoller && selectedRoller.name === nameToDelete) {
-              selectedRoller = null;
-              rollBtn.disabled = true;
-            }
-            if (pendingDesignationForNextRoll.active && pendingDesignationForNextRoll.designatedBy === nameToDelete) {
-              pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
-              designateModal.style.display = 'none';
-            }
-            if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy === nameToDelete) {
-              pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-              designateModal.style.display = 'none';
-            }
-          });
-        }
-
-        function showCustomAlert(message) { console.warn("Custom Alert:", message); alert(message); }
-        function showCustomConfirm(message, callback) { if(confirm(message)) callback(); }
-
-        function updateManualDiceInputState() {
-          if (selectedRoller && playerRewards.has(selectedRoller.name) && playerRewards.get(selectedRoller.name).manualDiceEnabled) {
-            manualDiceInput.disabled = false;
-            useManualDiceBtn.disabled = false;
-            manualDiceInput.placeholder = "手动输入点数 (奖励)";
-          } else {
-            manualDiceInput.disabled = true;
-            useManualDiceBtn.disabled = true;
-            manualDiceInput.placeholder = "1～6";
-          }
-        }
-
-        /* ===== 事件绑定 ===== */
-        document.getElementById('confirmAddPlayerBtn').addEventListener('click', () => {
-          const newPlayerNameInput = document.getElementById('newPlayerNameInput');
-          const newName = newPlayerNameInput.value.trim();
-          const newPlayerModalMessage = document.getElementById('newPlayerModalMessage');
-
-          if (newName) {
-            if (currentPlayers.some(p => p.name === newName)) {
-              newPlayerModalMessage.textContent = '该玩家已存在！';
-              newPlayerModalMessage.style.color = 'orange';
-            } else {
-              const newPlayer = {
-                name: newName,
-                avatar: `https://placehold.co/60x60/FFB6C1/000?text=${newName.charAt(0).toUpperCase()}`,
-                deletable: true
-              };
-              currentPlayers.push(newPlayer);
-              playerRewards.set(newName, { skipAnswer: false, designateAnswerer: false, manualDiceEnabled: false });
-              renderPlayerCards();
-              populatePlayerFilter();
-
-              addPlayerMessage.textContent = `玩家 "${newName}" 已添加！`;
-              addPlayerMessage.classList.remove('hidden');
-              gsap.fromTo(addPlayerMessage, { opacity: 0, y: 10 }, {
-                opacity: 1, y: 0, duration: 0.3, onComplete: () => {
-                  gsap.to(addPlayerMessage, { opacity: 0, y: -10, delay: 2, duration: 0.5, onComplete: () => addPlayerMessage.classList.add('hidden') });
-                }
-              });
-              document.getElementById('newPlayerModal').style.display = 'none';
-              newPlayerNameInput.value = '';
-              newPlayerModalMessage.textContent = '';
-            }
-          } else {
-            newPlayerModalMessage.textContent = '玩家名字不能为空！';
-            newPlayerModalMessage.style.color = 'red';
-          }
-        });
-
-        document.getElementById('cancelAddPlayerBtn').addEventListener('click', () => {
-          document.getElementById('newPlayerModal').style.display = 'none';
-          document.getElementById('newPlayerNameInput').value = '';
-          document.getElementById('newPlayerModalMessage').textContent = '';
-        });
-
-        randomSelectPlayerBtn.addEventListener('click', () => {
-          if (currentPlayers.length === 0) {
-            showCustomAlert('没有可选择的玩家！');
-            return;
-          }
-          let availablePlayersForRandom = [...currentPlayers];
-          if (selectedRoller && currentPlayers.length > 1) {
-            availablePlayersForRandom = currentPlayers.filter(p => p.name !== selectedRoller.name);
-            if (availablePlayersForRandom.length === 0) {
-              availablePlayersForRandom = [...currentPlayers];
-            }
-          }
-
-          const randomIndex = Math.floor(Math.random() * availablePlayersForRandom.length);
-          const randomlySelectedPlayer = availablePlayersForRandom[randomIndex];
-          selectPlayer(randomlySelectedPlayer.name);
-
-          const newlySelectedCard = playerSelection.querySelector(`.player-card.selected[data-name="${randomlySelectedPlayer.name}"]`);
-          if (newlySelectedCard) {
-            gsap.to(playerSelection, {
-              scrollLeft: newlySelectedCard.offsetLeft - (playerSelection.clientWidth / 2) + (newlySelectedCard.offsetWidth / 2),
-              duration: 0.5,
-              ease: "power2.out"
-            });
-          }
-          rollBtn.disabled = false;
-        });
-
-        rollBtn.addEventListener('click', async () => {
-          if (!selectedRoller) {
-            showCustomAlert('请先选择掷骰子的人！');
-            return;
-          }
-          if (pendingImmediateDesignation.active) {
-            pendingImmediateDesignation.originalRoller = selectedRoller;
-            await showDesignateModal(true);
-            if (!selectedRoller || pendingImmediateDesignation.active) {
-              pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-              return;
-            }
-          }
-          await performDiceRoll();
-        });
-
-        useManualDiceBtn.addEventListener('click', async () => {
-          if (!selectedRoller) {
-            showCustomAlert('请先选择掷骰子的人！');
-            return;
-          }
-          if (pendingImmediateDesignation.active) {
-            pendingImmediateDesignation.originalRoller = selectedRoller;
-            await showDesignateModal(true);
-            if (!selectedRoller || pendingImmediateDesignation.active) {
-              pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-              return;
-            }
-          }
-          const manualPoints = parseInt(manualDiceInput.value, 10);
-          if (isNaN(manualPoints) || manualPoints < 1 || manualPoints > 6) {
-            showCustomAlert('请输入1到6之间的有效点数！');
-            return;
-          }
-          await performDiceRoll(manualPoints);
-        });
-
-        async function performDiceRoll(manualPoints = null) {
-          questionScroller.classList.add('hidden');
-          directQuestionDisplay.classList.add('hidden');
-
-          rollBtn.disabled = true;
-          useManualDiceBtn.disabled = true;
-          manualDiceInput.disabled = true;
-          playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'none');
-
-          if (pendingDesignationForNextRoll.active) {
-            await showDesignateModal(false);
-            if (!selectedRoller || pendingDesignationForNextRoll.active) {
-              selectedRoller = pendingDesignationForNextRoll.originalRoller;
-              pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
-              rollBtn.disabled = false;
-              updateManualDiceInputState();
-              playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'auto');
-              return;
-            }
-          }
-
-          let points;
-          if (manualPoints !== null) {
-            points = manualPoints;
-            gsap.to(diceFace, { duration: 0.1, scale: 1.2, yoyo: true, repeat: 1, ease: "power1.out" });
-            await new Promise(r => setTimeout(r, 200));
-            diceFace.textContent = ['⚀','⚁','⚂','⚃','⚄','⚅'][points - 1];
-            if (selectedRoller && playerRewards.has(selectedRoller.name) && playerRewards.get(selectedRoller.name).manualDiceEnabled) {
-              playerRewards.get(selectedRoller.name).manualDiceEnabled = false;
-              updateManualDiceInputState();
-            }
-          } else {
-            const diceChars = ['⚀','⚁','⚂','⚃','⚄','⚅'];
-            let loops = 12;
-            const interval = setInterval(() => {
-              diceFace.textContent = diceChars[Math.floor(Math.random() * 6)];
-              gsap.to(diceFace, { duration: 0.1, scale: 1.2, yoyo: true, repeat: 1, ease: "power1.out" });
-              if (--loops === 0) clearInterval(interval);
-            }, 80);
-            await new Promise(r => setTimeout(r, loops * 80 + 60));
-            points = Math.floor(Math.random() * 6) + 1;
-            diceFace.textContent = diceChars[points - 1];
-          }
-          diceResult.textContent = `${selectedRoller.name} 掷出了：${points} 点`;
-
-          const mapInfo = diceMap[points];
-          if (mapInfo) {
-            prepareDirectQuestionInterface(points, selectedRoller.name);
-          } else {
-            console.error(`骰子点数 ${points} 没有对应的问题类型。`);
-            diceResult.textContent += " (但没有找到对应的问题类型)";
-            questionScroller.classList.add('hidden');
-            directQuestionDisplay.classList.add('hidden');
-          }
-
-          rollBtn.disabled = false;
-          updateManualDiceInputState();
-          playerSelection.querySelectorAll('.player-card').forEach(card => card.style.pointerEvents = 'auto');
-        }
-
-        function prepareDirectQuestionInterface(points, rollerName) {
-          questionScroller.classList.add('hidden');
-          directQuestionDisplay.classList.remove('hidden');
-          gsap.fromTo(directQuestionDisplay, { opacity: 0 }, { opacity: 1, duration: 0.3 });
-
-          const map = diceMap[points];
-          currentDirectBankKey = map.key;
-          questionTypeDisplay.textContent = map.label;
-
-          const allQuestions = questionBank[currentDirectBankKey].map(q => ({ ...q }));
-          const history = personQuestionHistory.get(rollerName) || [];
-          let filteredQuestions = allQuestions.filter(q => !history.includes(q.text));
-
-          if (filteredQuestions.length === 0) {
-            filteredQuestions = [...allQuestions];
-          }
-
-          currentDirectQuestion = filteredQuestions[Math.floor(Math.random() * filteredQuestions.length)];
-          directQuestionText.textContent = currentDirectQuestion ? currentDirectQuestion.text : "此类型暂无问题。";
-
-          directChangeAttemptsLeft = 2;
-          changeQuestionAttemptsLeftSpan.textContent = directChangeAttemptsLeft;
-          changeQuestionBtn.disabled = !currentDirectQuestion || directChangeAttemptsLeft === 0;
-          directAnswerBtn.disabled = !currentDirectQuestion;
-          directPenaltyBtn.disabled = !currentDirectQuestion;
-
-          if (currentDirectQuestion) {
-            window.scrollTo({ top: directQuestionDisplay.offsetTop - 20, behavior: 'smooth' });
-          }
-        }
-
-        function setupDirectQuestionListeners() {
-          changeQuestionBtn.addEventListener('click', () => {
-            if (directChangeAttemptsLeft > 0 && currentDirectQuestion) {
-              directChangeAttemptsLeft--;
-              changeQuestionAttemptsLeftSpan.textContent = directChangeAttemptsLeft;
-
-              const allQuestions = questionBank[currentDirectBankKey].map(q => ({ ...q }));
-              const history = personQuestionHistory.get(selectedRoller.name) || [];
-              let availableQuestions = allQuestions.filter(q => q.text !== currentDirectQuestion.text && !history.includes(q.text));
-
-              if (availableQuestions.length === 0) {
-                availableQuestions = allQuestions.filter(q => q.text !== currentDirectQuestion.text);
-                if (availableQuestions.length === 0 && allQuestions.length > 0) {
-                  availableQuestions = [currentDirectQuestion];
-                } else if (availableQuestions.length === 0 && allQuestions.length === 0) {
-                  directQuestionText.textContent = "此类型暂无更多问题。";
-                  changeQuestionBtn.disabled = true;
-                  return;
-                }
-              }
-
-              currentDirectQuestion = availableQuestions[Math.floor(Math.random() * availableQuestions.length)];
-              directQuestionText.textContent = currentDirectQuestion.text;
-
-              if (directChangeAttemptsLeft === 0) {
-                changeQuestionBtn.disabled = true;
-              }
-            }
-          });
-
-          directAnswerBtn.addEventListener('click', () => {
-            if (currentDirectQuestion) {
-              showQuestionModal(currentDirectQuestion.text, { isDirectAnswer: true });
-            }
-          });
-
-          directPenaltyBtn.addEventListener('click', () => {
-            if (currentDirectQuestion) {
-              showQuestionModal(currentDirectQuestion.text, { isDirectPenalty: true });
-            }
-          });
-        }
-
-        function addQuestionToHistory(personName, questionText) {
-          let history = personQuestionHistory.get(personName) || [];
-          if (!history.includes(questionText)) {
-            history.push(questionText);
-            if (history.length > 20) {
-              history.shift();
-            }
-            personQuestionHistory.set(personName, history);
-          }
-        }
-
-        /* ===== 问题弹窗逻辑 ===== */
-        function showQuestionModal(qText, options = {}) {
-          currentModalOptions = options;
-          modalQuestion.textContent = qText;
-          questionModal.style.display = 'flex';
-          answerForm.reset();
-
-          answererDisplay.textContent = selectedRoller ? selectedRoller.name : '未知玩家';
-
-          if (options.isDirectAnswer) {
-            willAnswerButtons.classList.add('hidden');
-            answerFieldGroup.classList.remove('hidden');
-            noAnswerOptions.classList.add('hidden');
-          } else if (options.isDirectPenalty) {
-            willAnswerButtons.classList.add('hidden');
-            answerFieldGroup.classList.add('hidden');
-            noAnswerOptions.classList.remove('hidden');
-            renderPenaltyOptions();
-          } else {
-            willAnswerButtons.classList.remove('hidden');
-            answerFieldGroup.classList.add('hidden');
-            noAnswerOptions.classList.add('hidden');
-            selectedPenalty = '';
-            willAnswerButtons.querySelectorAll('.will-answer-btn').forEach(btn => btn.classList.remove('selected'));
-            willAnswerValue = '';
-            renderPenaltyOptions();
-          }
-
-          gsap.fromTo(questionModal, { opacity: 0 }, { opacity: 1, duration: 0.2 });
-          window.scrollTo({ top: 0 });
-        }
-
-        function renderPenaltyOptions() {
-          penaltyOptionsContainer.innerHTML = '';
-          const penaltyOptions = [
-            { value: 'skip', text: '跳过 (需奖励)' },
-            { value: 'penalty_drink', text: '罚酒' },
-            { value: 'no_phone', text: '三十分钟不可以看手机' }
-          ];
-
-          penaltyOptions.forEach(option => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.classList.add('penalty-option-btn');
-            button.dataset.value = option.value;
-            button.textContent = option.text;
-
-            if (option.value === 'skip' &&
-                (!selectedRoller || !playerRewards.has(selectedRoller.name) || !playerRewards.get(selectedRoller.name).skipAnswer)) {
-              button.classList.add('disabled');
-              button.disabled = true;
-            }
-
-            button.addEventListener('click', () => {
-              if (button.disabled) return;
-              penaltyOptionsContainer.querySelectorAll('.penalty-option-btn').forEach(btn => btn.classList.remove('selected'));
-              button.classList.add('selected');
-              selectedPenalty = button.dataset.value;
-            });
-            penaltyOptionsContainer.appendChild(button);
-          });
-        }
-
-        willAnswerButtons.addEventListener('click', (e) => {
-          if (e.target.classList.contains('will-answer-btn')) {
-            willAnswerButtons.querySelectorAll('.will-answer-btn').forEach(btn => btn.classList.remove('selected'));
-            e.target.classList.add('selected');
-            willAnswerValue = e.target.dataset.value;
-
-            if (willAnswerValue === 'Yes') {
-              answerFieldGroup.classList.remove('hidden');
-              noAnswerOptions.classList.add('hidden');
-              selectedPenalty = '';
-            } else if (willAnswerValue === 'No') {
-              answerFieldGroup.classList.add('hidden');
-              noAnswerOptions.classList.remove('hidden');
-              renderPenaltyOptions();
-            }
-          }
-        });
-
-        answerForm.addEventListener('submit', (e) => {
-          e.preventDefault();
-          if (!selectedRoller) {
-            showCustomAlert("错误：没有选定的回答者。");
-            return;
-          }
-          const who = selectedRoller.name;
-          let ans = '';
-          let lotteryResultText = '';
-          let answerStatus = '';
-          let questionTextForHistory = modalQuestion.textContent;
-
-          if (currentModalOptions.isDirectAnswer) {
-            ans = answerForm.answer.value.trim();
-            if (!ans) {
-              showCustomAlert('请输入回答内容！');
-              return;
-            }
-            answerStatus = 'answered';
-            addQuestionToHistory(who, questionTextForHistory);
-            lotteryResultText = performLottery(who);
-          } else if (currentModalOptions.isDirectPenalty) {
-            if (!selectedPenalty) {
-              showCustomAlert('请选择一项惩罚！');
-              return;
-            }
-            const penaltyButton = penaltyOptionsContainer.querySelector(`.penalty-option-btn[data-value="${selectedPenalty}"]`);
-            ans = penaltyButton ? penaltyButton.textContent : selectedPenalty;
-
-            if (selectedPenalty === 'skip') {
-              answerStatus = 'skipped';
-              if (selectedRoller && playerRewards.has(who) && playerRewards.get(who).skipAnswer) {
-                playerRewards.get(who).skipAnswer = false;
-              }
-              lotteryResultText = performLottery(who);
-            } else {
-              answerStatus = 'penalized';
-              lotteryResultText = "未抽奖 (选择了惩罚)";
-            }
-            addQuestionToHistory(who, questionTextForHistory);
-          } else {
-            if (willAnswerValue === 'Yes') {
-              ans = answerForm.answer.value.trim();
-              if (!ans) {
-                showCustomAlert('请输入回答内容！');
-                return;
-              }
-              answerStatus = 'answered';
-            } else if (willAnswerValue === 'No') {
-              if (!selectedPenalty) {
-                showCustomAlert('请选择一项惩罚！');
-                return;
-              }
-              const penaltyButton = penaltyOptionsContainer.querySelector(`.penalty-option-btn[data-value="${selectedPenalty}"]`);
-              ans = penaltyButton ? penaltyButton.textContent : selectedPenalty;
-
-              if (selectedPenalty === 'skip') {
-                answerStatus = 'skipped';
-                if (selectedRoller && playerRewards.has(who) && playerRewards.get(who).skipAnswer) {
-                  playerRewards.get(who).skipAnswer = false;
-                }
-              } else {
-                answerStatus = 'penalized';
-              }
-            } else {
-              showCustomAlert('请选择是否作答！');
-              return;
-            }
-            addQuestionToHistory(who, questionTextForHistory);
-            if (willAnswerValue === 'Yes' || (willAnswerValue === 'No' && selectedPenalty === 'skip')) {
-              lotteryResultText = performLottery(who);
-            } else {
-              lotteryResultText = "未抽奖 (选择了惩罚)";
-            }
-          }
-
-          const now = new Date();
-          const formattedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-          const formattedTime = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-          // —— 在本地数组和云端同时保存记录 —— 
-          const recordObj = {
-            id: Date.now(),
-            player: who,
-            question: questionTextForHistory,
-            answer: ans,
-            status: answerStatus,
-            date: formattedDate,
-            time: formattedTime,
-            lotteryResult: lotteryResultText
-          };
-          historyRecords.push(recordObj);
-          saveRecordToCloud(recordObj);
-          renderHistory();
-
-          questionModal.style.display = 'none';
-          directQuestionDisplay.classList.add('hidden');
-          questionScroller.classList.add('hidden');
-
-          if (playerRewards.has(who) && playerRewards.get(who).designateAnswerer) {
-            pendingDesignationForNextRoll = { active: true, designatedBy: who, originalRoller: who };
-            playerRewards.get(who).designateAnswerer = false;
-          }
-          currentModalOptions = {};
-        });
-
-        /* ===== 抽奖逻辑 ===== */
-        function performLottery(playerWhoAnswered) {
-          const randomNumber = Math.random() * 100;
-          let resultMessage = '';
-          let rewardType = null;
-
-          if (randomNumber < 50) {
-            resultMessage = '谢谢参加！';
-          } else if (randomNumber < 50 + 8.33) {
-            resultMessage = '恭喜你！下次可以跳过回答！';
-            rewardType = 'skipAnswer';
-          } else if (randomNumber < 50 + 8.33 + 16.67) {
-            resultMessage = '恭喜你！下局回答完可以指定任何一个人投掷回答！';
-            rewardType = 'designateAnswerer';
-          } else if (randomNumber < 50 + 8.33 + 16.67 + 16.67) {
-            resultMessage = '恭喜你！下局投掷时可以手动选择点数！';
-            rewardType = 'manualDiceEnabled';
-          } else {
-            resultMessage = '恭喜你！可以立马指定某个玩家开始投掷骰子！';
-            rewardType = 'immediateDesignation';
-          }
-
-          lotteryMessage.textContent = resultMessage.startsWith('恭喜') ? '🎉 ' + resultMessage : resultMessage;
-          lotteryResultModal.style.display = 'flex';
-          gsap.fromTo(lotteryResultModal, { opacity: 0 }, { opacity: 1, duration: 0.2 });
-
-          if (rewardType && playerRewards.has(playerWhoAnswered)) {
-            const rewards = playerRewards.get(playerWhoAnswered);
-            if (rewardType === 'skipAnswer') rewards.skipAnswer = true;
-            else if (rewardType === 'designateAnswerer') rewards.designateAnswerer = true;
-            else if (rewardType === 'manualDiceEnabled') {
-              rewards.manualDiceEnabled = true;
-              updateManualDiceInputState();
-            }
-            else if (rewardType === 'immediateDesignation') {
-              pendingImmediateDesignation = { active: true, designatedBy: playerWhoAnswered, originalRoller: null };
-            }
-            playerRewards.set(playerWhoAnswered, rewards);
-          }
-          return resultMessage;
-        }
-
-        closeLotteryModalBtn.addEventListener('click', () => {
-          lotteryResultModal.style.display = 'none';
-          if (pendingImmediateDesignation.active && pendingImmediateDesignation.designatedBy) {
-            pendingImmediateDesignation.originalRoller = selectedRoller;
-            showDesignateModal(true);
-          }
-        });
-
-
-        /* ===== 指定玩家弹窗逻辑 ===== */ 
-        function showDesignateModal(isImmediate) {
-          return new Promise((resolve) => {
-            designateModal.style.display = 'flex';
-            const designatorName = isImmediate ? pendingImmediateDesignation.designatedBy : pendingDesignationForNextRoll.designatedBy;
-
-            if (isImmediate) {
-              designateMessage.textContent = `玩家 ${designatorName} 获得了“立马指定某个玩家开始投掷骰子”的奖励。请选择由谁来开始本局游戏。`;
-            } else {
-              designateMessage.textContent = `玩家 ${designatorName} 获得了“指定下一位回答者”的奖励。请选择由谁来回答本局问题。`;
-            }
-            designatePlayerList.innerHTML = '';
-
-            currentPlayers.forEach(player => {
-              const playerItem = document.createElement('div');
-              playerItem.classList.add('designate-player-item');
-              playerItem.dataset.name = player.name;
-
-              const img = document.createElement('img');
-              img.src = player.avatar;
-              img.alt = player.name;
-              img.onerror = function() { this.onerror=null; this.src='https://placehold.co/40x40/CCCCCC/000?text=User'; };
-
-              const span = document.createElement('span');
-              span.textContent = player.name;
-
-              playerItem.appendChild(img);
-              playerItem.appendChild(span);
-
-              playerItem.addEventListener('click', () => {
-                selectPlayer(player.name);
-                if (isImmediate) {
-                  pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-                } else {
-                  pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
-                }
-                designateModal.style.display = 'none';
-                resolve();
-              });
-              designatePlayerList.appendChild(playerItem);
-            });
-
-            designateCancelBtn.onclick = () => {
-              if (isImmediate) {
-                selectedRoller = pendingImmediateDesignation.originalRoller;
-                pendingImmediateDesignation = { active: false, designatedBy: null, originalRoller: null };
-                if (selectedRoller) selectPlayer(selectedRoller.name);
-              } else {
-                selectedRoller = pendingDesignationForNextRoll.originalRoller;
-                pendingDesignationForNextRoll = { active: false, designatedBy: null, originalRoller: null };
-                if (selectedRoller) selectPlayer(selectedRoller.name);
-              }
-              designateModal.style.display = 'none';
-              resolve();
-            };
-          });
-        }
-
-        /* ===== 刷新骰子规则弹窗 ===== */
-        function populateDiceMapModal() {
-          diceMapList.innerHTML = '';
-          for (const [points, mapInfo] of Object.entries(diceMap)) {
-            const listItem = document.createElement('li');
-            listItem.style.padding = '0.5rem 0';
-            listItem.style.borderBottom = '1px dashed #eee';
-            listItem.innerHTML = `<strong>${points} 点:</strong> <span>${mapInfo.label}</span>`;
-            diceMapList.appendChild(listItem);
-          }
-        }
-
-        diceMapInfoIcon.addEventListener('click', () => {
-          diceMapModal.style.display = 'flex';
-          gsap.fromTo(diceMapModal, { opacity: 0 }, { opacity: 1, duration: 0.2 });
-        });
-
-        closeDiceMapModalBtnMain.addEventListener('click', () => {
-          diceMapModal.style.display = 'none';
-        });
-
-        /* ===== 历史记录 & 筛选逻辑 ===== */
-        function populatePlayerFilter() {
-          const currentFilterValue = filterPlayerSelect.value;
-          filterPlayerSelect.innerHTML = '<option value="all">所有玩家</option>';
-          currentPlayers.forEach(player => {
-            const option = document.createElement('option');
-            option.value = player.name;
-            option.textContent = player.name;
-            filterPlayerSelect.appendChild(option);
-          });
-          if (currentPlayers.some(p => p.name === currentFilterValue)) {
-            filterPlayerSelect.value = currentFilterValue;
-          }
-        }
-
-        function renderHistory() {
-          historyDiv.innerHTML = '';
-          const filterPlayer = filterPlayerSelect.value;
-          const filterDate = filterDateSelect.value;
-          const filterStatus = filterStatusSelect.value;
-
-          const filteredRecords = historyRecords.filter(record => {
-            if (filterPlayer !== 'all' && record.player !== filterPlayer) return false;
-            if (filterDate === 'today') {
-              const today = new Date();
-              const recordDate = new Date(record.date);
-              if (recordDate.toDateString() !== today.toDateString()) return false;
-            }
-            if (filterStatus !== 'all' && record.status !== filterStatus) return false;
-            return true;
-          });
-
-          if (filteredRecords.length === 0) {
-            historyDiv.textContent = '没有符合条件的记录。';
-            return;
-          }
-
-          filteredRecords.slice().reverse().forEach(record => {
-            const block = document.createElement('details');
-            const summary = document.createElement('summary');
-            summary.textContent = `${record.player} · 抽中的问题：${record.question}`;
-
-            const p = document.createElement('p');
-            p.style.whiteSpace = 'pre-line';
-            p.style.fontSize = '0.95rem';
-            p.style.margin = '0.5rem 0';
-            p.innerText = `回答者：${record.player}
-是否作答：${record.status === 'answered' ? '是' : (record.status === 'skipped' ? '否 (跳过)' : '否 (惩罚)')}
-回答/惩罚：${record.answer || '（无）'}
-时间：${record.date} ${record.time}
-抽奖结果：${record.lotteryResult}`;
-
-            block.appendChild(summary);
-            block.appendChild(p);
-            historyDiv.appendChild(block);
-          });
-        }
-
-        filterPlayerSelect.addEventListener('change', renderHistory);
-        filterDateSelect.addEventListener('change', renderHistory);
-        filterStatusSelect.addEventListener('change', renderHistory);
-
-        /* ===== 启动 ===== */
-        initializePlayers();
-      })();
-    });
-  </script>
-
-  <!-- ==== 新玩家弹窗 DOM ==== -->
-  <div id="newPlayerModal">
-    <div id="newPlayerModalCard">
-      <span class="close-modal-btn" id="closeNewPlayerModalBtn">&times;</span>
-      <h2 style="font-size: 1.3rem; margin-top: 0;">添加新玩家</h2>
-      <input type="text" id="newPlayerNameInput" placeholder="输入新玩家名字" />
-      <p id="newPlayerModalMessage" style="font-size: 0.9rem; color: red; margin-bottom: 0.5rem; min-height: 1.2em;"></p>
-      <div class="modal-buttons">
-        <button id="confirmAddPlayerBtn">添加</button>
-        <button id="cancelAddPlayerBtn" style="background-color: #6c757d; font-size: 1rem; padding: 0.7rem;">取消</button>
+    <!-- Mode B：真心话雷达 弹窗（默认隐藏） -->
+    <div class="modal-overlay" id="modal-mode-b" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal-content">
+        <button
+          type="button"
+          class="modal-close"
+          id="modal-mode-b-abort"
+          aria-label="中止本轮"
+          style="width: auto; padding: 0 10px; font-size: 14px; font-weight: 900"
+        >
+          中止
+        </button>
+        <h2 class="modal-title" id="modal-mode-b-title">
+          <span class="modal-mode-icon" aria-hidden="true">💬</span>
+          真心话雷达
+        </h2>
+        <p class="modal-subtitle">猜：Target 选了真话还是谎话？</p>
+        <p class="modal-question" id="modal-mode-b-question">正在生成吐槽问题……</p>
+
+        <div class="modal-feedback" id="modal-mode-b-feedback" aria-live="polite" style="display: none"></div>
+        <div class="modal-waiting" id="modal-mode-b-waiting" style="display: none">等待轮次继续……</div>
+        <div class="modal-results" id="modal-mode-b-results" style="display: none">
+          <h3 class="modal-results-title">雷达结果</h3>
+          <div class="modal-results-list" id="modal-mode-b-results-list"></div>
+        </div>
+
+        <div class="modal-options" id="modal-mode-b-options">
+          <button type="button" class="modal-option" data-option="truth">
+            <span class="modal-option-label">真</span>
+            <span class="modal-option-text">真心话</span>
+          </button>
+          <button type="button" class="modal-option" data-option="lie">
+            <span class="modal-option-label">谎</span>
+            <span class="modal-option-text">谎话</span>
+          </button>
+        </div>
+
+        <div class="modal-countdown" id="modal-mode-b-countdown">20</div>
+        <p class="modal-countdown-label" id="modal-mode-b-countdown-label">秒后自动结束</p>
       </div>
     </div>
-  </div>
-</body>
+
+    <!-- Mode C：卧室大冒险 弹窗（默认隐藏） -->
+    <div class="modal-overlay" id="modal-mode-c" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal-content">
+        <button
+          type="button"
+          class="modal-close"
+          id="modal-mode-c-abort"
+          aria-label="中止本轮"
+          style="width: auto; padding: 0 10px; font-size: 14px; font-weight: 900"
+        >
+          中止
+        </button>
+        <h2 class="modal-title" id="modal-mode-c-title">
+          <span class="modal-mode-icon" aria-hidden="true">🏠</span>
+          卧室大冒险
+        </h2>
+        <p class="modal-subtitle">Common items 的搞笑小任务</p>
+        <p class="modal-question" id="modal-mode-c-mission">正在生成任务……</p>
+
+        <div class="modal-feedback" id="modal-mode-c-feedback" aria-live="polite" style="display: none"></div>
+        <div class="modal-waiting" id="modal-mode-c-waiting" style="display: none">等待目标完成任务……</div>
+        <div class="modal-results" id="modal-mode-c-results" style="display: none">
+          <h3 class="modal-results-title">任务完成情况</h3>
+          <div class="modal-results-list" id="modal-mode-c-results-list"></div>
+        </div>
+
+        <div class="modal-options" id="modal-mode-c-options">
+          <button type="button" class="modal-option" data-option="done">
+            <span class="modal-option-label">✓</span>
+            <span class="modal-option-text">我已完成</span>
+          </button>
+        </div>
+
+        <div class="modal-countdown" id="modal-mode-c-countdown">30</div>
+        <p class="modal-countdown-label" id="modal-mode-c-countdown-label">秒后自动结束</p>
+      </div>
+    </div>
+
+    <!-- 交互逻辑脚本 -->
+    <script src="./config.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
 </html>
+
