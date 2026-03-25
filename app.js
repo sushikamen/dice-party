@@ -768,32 +768,33 @@ async function requestStartParty(selectedMode) {
     // --- 修改：删除了所有 lock (锁定) 逻辑，直接更新数据库 ---
     await update(roomRootRef(), {
       status: "playing",
-      "gameState.mode": selectedMode,
-      "gameState.hostId": hostId,
-      "gameState.pause": { active: false },
-      "submissions": {}, // 清空之前的提交记录
-      "gameState.round": {
-        id: roundId,
-        subMode: subMode,
-        stage: "init",
-        participantIds: participantIds,
-        question: null,
-        options: null,
-        correct: null,
-        decode: null,
-        mission: null,
-        targetPlayerId: null,
-        targetChoice: null,
-        results: null,
-        endsAt: null,
-        autoNextAt: null
+      submissions: {}, 
+      gameState: {
+        mode: selectedMode,
+        hostId: hostId,
+        pause: { active: false },
+        round: {
+          id: roundId,
+          subMode: subMode,
+          stage: "init",
+          participantIds: participantIds,
+          question: null,
+          options: null,
+          correct: null,
+          decode: null,
+          mission: null,
+          targetPlayerId: null,
+          targetChoice: null,
+          results: null,
+          endsAt: null,
+          autoNextAt: null
+        }
       }
     });
-  } catch (error) {
+  } catch (error) { // <--- 确保有这行：捕捉错误
     console.error("❌ 开启游戏失败:", error);
   }
-}
-
+} // <--- 确保有这行：结束整个函数
 async function requestPause() {
   if (!db) return;
   try {
