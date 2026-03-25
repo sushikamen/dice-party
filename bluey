@@ -1043,7 +1043,13 @@ async function applyModeAFallback(roundId, participantIds) {
   try {
     const startedAt = nowMs();
     const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 20) * 1000;
-    await update(roomRootRef(), { "gameState.round": { ...localState.gameState.round, id: roundId, subMode: "A", stage: "a_answer", participantIds, question: fallback.question, options: fallback.options, correct: fallback.correct, decode: fallback.decode, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+    // 修正：将 gameState.round 改为嵌套对象
+    await update(roomRootRef(), { 
+      gameState: {
+        ...localState.gameState,
+        round: { ...localState.gameState.round, id: roundId, subMode: "A", stage: "a_answer", participantIds, question: fallback.question, options: fallback.options, correct: fallback.correct, decode: fallback.decode, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } 
+      }
+    });
   } catch (error) {
     console.error("错误位置: [applyModeAFallback], 原因:", error);
   }
@@ -1075,12 +1081,17 @@ async function applyModeBFallback(roundId, participantIds) {
     const targetPlayerId = pickRandom(participantIds);
     const startedAt = nowMs();
     const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.B || 20) * 1000;
-    await update(roomRootRef(), { "gameState.round": { ...localState.gameState.round, id: roundId, subMode: "B", stage: "b_target_choice", participantIds, targetPlayerId, question: "（备用）你有没有那种“别人看不出来但你自己很坚持”的小习惯？说出来我都替你尴尬一下。", targetChoice: null, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+    // 修正：嵌套写入
+    await update(roomRootRef(), { 
+      gameState: {
+        ...localState.gameState,
+        round: { ...localState.gameState.round, id: roundId, subMode: "B", stage: "b_target_choice", participantIds, targetPlayerId, question: "（备用）你有没有那种“别人看不出来但你自己很坚持”的小习惯？说出来我都替你尴尬一下。", targetChoice: null, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } 
+      }
+    });
   } catch (error) {
     console.error("错误位置: [applyModeBFallback], 原因:", error);
   }
 }
-
 async function generateModeCQuestion(roundId, participantIds) {
   if (!ensureGeminiModel()) return applyModeCFallback(roundId, participantIds);
   try {
@@ -1107,12 +1118,17 @@ async function applyModeCFallback(roundId, participantIds) {
     const targetPlayerId = pickRandom(participantIds);
     const startedAt = nowMs();
     const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.C || 30) * 1000;
-    await update(roomRootRef(), { "gameState.round": { ...localState.gameState.round, id: roundId, subMode: "C", stage: "c_mission", participantIds, targetPlayerId, mission: "（备用）用一张便利贴写一句“我今天要乖一点”，贴在桌角 10 秒，然后假装自己很认真。", startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+    // 修正：嵌套写入
+    await update(roomRootRef(), { 
+      gameState: {
+        ...localState.gameState,
+        round: { ...localState.gameState.round, id: roundId, subMode: "C", stage: "c_mission", participantIds, targetPlayerId, mission: "（备用）用一张便利贴写一句“我今天要乖一点”，贴在桌角 10 秒，然后假装自己很认真。", startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } 
+      }
+    });
   } catch (error) {
     console.error("错误位置: [applyModeCFallback], 原因:", error);
   }
 }
-
 // ============================================================
 // Reveal（host 写回 gameState）
 // ============================================================
