@@ -3,7 +3,7 @@ window.APP_CONFIG = {
   firebase: {
     apiKey: "AIzaSyADztU2psfDqgLjpsX_GGX8XETJk4FHSqs",
     authDomain: "bluey-ae92e.firebaseapp.com",
-    databaseURL: "https://bluey-ae92e-default-rtdb.firebaseio.com", // 我帮你拼接好了
+    databaseURL: "https://bluey-ae92e-default-rtdb.asia-southeast1.firebasedatabase.app", // 我帮你拼接好了
     projectId: "bluey-ae92e",
     storageBucket: "bluey-ae92e.firebasestorage.app",
     messagingSenderId: "96081299065",
