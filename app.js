@@ -749,29 +749,34 @@ async function joinParty() {
 
 async function requestStartParty(selectedMode) {
   if (!selectedMode || !db) return;
-  if (isPauseActive()) return;
-
+  // 即使在暂停状态，我们也允许强制重新开始
+  
   try {
     const participantIds = Object.keys(localState.players || {});
-    if (!participantIds.length) return;
-    const hostId = computeHostId(localState.players);
+    if (!participantIds.length) {
+      console.error("房间里没有人，无法开始游戏");
+      return;
+    }
+
+    // --- 修改：谁点开始，谁就是这一局的房主，负责生成题目 ---
+    const hostId = myPlayerId; 
     const roundId = makeRoundId();
     const subMode = selectedMode === "D" ? pickRandom(["A", "B", "C"]) : selectedMode;
-    const token = `start_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const gotLock = await claimStartLock(token);
-    if (!gotLock) return;
 
+    console.log("🚀 正在强制开启游戏，模式:", selectedMode);
+
+    // --- 修改：删除了所有 lock (锁定) 逻辑，直接更新数据库 ---
     await update(roomRootRef(), {
       status: "playing",
       "gameState.mode": selectedMode,
       "gameState.hostId": hostId,
       "gameState.pause": { active: false },
-      submissions: {},
+      "submissions": {}, // 清空之前的提交记录
       "gameState.round": {
         id: roundId,
-        subMode,
+        subMode: subMode,
         stage: "init",
-        participantIds,
+        participantIds: participantIds,
         question: null,
         options: null,
         correct: null,
@@ -785,7 +790,7 @@ async function requestStartParty(selectedMode) {
       }
     });
   } catch (error) {
-    console.error("错误位置: [requestStartParty], 原因:", error);
+    console.error("❌ 开启游戏失败:", error);
   }
 }
 
