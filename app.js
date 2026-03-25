@@ -1,4 +1,4 @@
-console.log("app.js loaded (Decentralized Version)");
+console.log("app.js loaded (stub)");
 
 import { initializeApp as initializeFirebaseApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import {
@@ -69,7 +69,7 @@ function ensureGeminiModel() {
     const apiKey = getGeminiApiKey();
     if (!apiKey) return false;
     const genAI = new GoogleGenerativeAI(apiKey);
-    geminiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash", systemInstruction: SYSTEM_PROMPT });
+    geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: SYSTEM_PROMPT });
     return true;
   } catch (error) {
     console.error("错误位置: [初始化 Gemini Model], 原因:", error);
@@ -96,16 +96,33 @@ function msToSecondsCeil(ms) {
   return Math.max(0, Math.ceil(ms / 1000));
 }
 
-function roomRootRef() { return ref(db, ROOM_PATH); }
-function playersRef() { return ref(db, `${ROOM_PATH}/players`); }
-function statusRef() { return ref(db, `${ROOM_PATH}/status`); }
-function gameStateRef() { return ref(db, `${ROOM_PATH}/gameState`); }
-function submissionsRef() { return ref(db, `${ROOM_PATH}/submissions`); }
+function roomRootRef() {
+  return ref(db, ROOM_PATH);
+}
+function playersRef() {
+  return ref(db, `${ROOM_PATH}/players`);
+}
+function statusRef() {
+  return ref(db, `${ROOM_PATH}/status`);
+}
+function gameStateRef() {
+  return ref(db, `${ROOM_PATH}/gameState`);
+}
+function submissionsRef() {
+  return ref(db, `${ROOM_PATH}/submissions`);
+}
+function generationLockRef() {
+  return ref(db, `${ROOM_PATH}/gameState/generationLock`);
+}
+function startLockRef() {
+  return ref(db, `${ROOM_PATH}/gameState/startLock`);
+}
 
 function makeRoundId() {
   try {
     return `r_${Date.now()}_${Math.random().toString(16).slice(2)}`;
   } catch (error) {
+    console.error("错误位置: [生成 roundId], 原因:", error);
     return `r_${Date.now()}`;
   }
 }
@@ -115,8 +132,28 @@ function pickRandom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+function computeHostId(playersObj) {
+  try {
+    const entries = Object.entries(playersObj || {});
+    if (!entries.length) return null;
+    const sorted = entries
+      .map(([id, p]) => ({ id, p }))
+      .filter((x) => x.p && typeof x.p.joinedAt === "number")
+      .sort((a, b) => a.p.joinedAt - b.p.joinedAt);
+    return sorted.length ? sorted[0].id : entries[0][0];
+  } catch (error) {
+    console.error("错误位置: [计算房主], 原因:", error);
+    return null;
+  }
+}
+
 function isPauseActive() {
   return !!localState.gameState?.pause?.active;
+}
+
+function isHostNow() {
+  const hostId = computeHostId(localState.players);
+  return !!(hostId && hostId === myPlayerId);
 }
 
 function getSubmissionsForRound() {
@@ -141,29 +178,40 @@ async function initFirebase() {
   }
 }
 
-// ============================================================
-// 分布式竞争锁
-// ============================================================
-async function claimActionLock(actionName, roundId) {
+async function claimGenerationLock(token) {
   try {
-    const lockRef = ref(db, `${ROOM_PATH}/locks/${actionName}_${roundId}`);
-    let success = false;
-    await runTransaction(lockRef, (current) => {
-      if (current === null) {
-        success = true;
-        return { lockedBy: myPlayerId, at: Date.now() };
-      }
-      return; 
+    const result = await runTransaction(generationLockRef(), (current) => {
+      const c = current || {};
+      const now = Date.now();
+      const expired = typeof c.expiresAt !== "number" ? true : c.expiresAt < now;
+      if (c.locked && !expired) return current;
+      return { locked: true, requestToken: token, claimedBy: myPlayerId, claimedAt: now, expiresAt: now + 30000 };
     });
-    return success;
+    const final = result?.snapshot?.val();
+    return !!(final && final.requestToken === token && final.claimedBy === myPlayerId);
   } catch (error) {
+    console.error("错误位置: [claimGenerationLock], 原因:", error);
     return false;
   }
 }
 
-// ============================================================
-// UI 与 视图控制
-// ============================================================
+async function claimStartLock(token) {
+  try {
+    const result = await runTransaction(startLockRef(), (current) => {
+      const c = current || {};
+      const now = Date.now();
+      const expired = typeof c.expiresAt !== "number" ? true : c.expiresAt < now;
+      if (c.locked && !expired) return current;
+      return { locked: true, requestToken: token, claimedBy: myPlayerId, claimedAt: now, expiresAt: now + 15000 };
+    });
+    const final = result?.snapshot?.val();
+    return !!(final && final.requestToken === token && final.claimedBy === myPlayerId);
+  } catch (error) {
+    console.error("错误位置: [claimStartLock], 原因:", error);
+    return false;
+  }
+}
+
 const dom = {};
 function bindDom() {
   dom.viewLobby = document.getElementById("view-lobby");
@@ -216,13 +264,37 @@ function bindDom() {
   dom.modeCCountdownLabel = document.getElementById("modal-mode-c-countdown-label");
 }
 
-function openModal(el) { if (el) el.classList.add("is-open"); }
-function closeModal(el) { if (el) el.classList.remove("is-open"); }
-function hideAllGameModals() { closeModal(dom.modalModeA); closeModal(dom.modalModeB); closeModal(dom.modalModeC); }
+function openModal(el) {
+  try {
+    if (!el) return;
+    el.classList.add("is-open");
+    el.setAttribute("aria-hidden", "false");
+  } catch (error) {
+    console.error("错误位置: [openModal], 原因:", error);
+  }
+}
+function closeModal(el) {
+  try {
+    if (!el) return;
+    el.classList.remove("is-open");
+    el.setAttribute("aria-hidden", "true");
+  } catch (error) {
+    console.error("错误位置: [closeModal], 原因:", error);
+  }
+}
+function hideAllGameModals() {
+  closeModal(dom.modalModeA);
+  closeModal(dom.modalModeB);
+  closeModal(dom.modalModeC);
+}
 
 function setViews({ lobbyVisible, hallVisible }) {
-  if (dom.viewLobby) dom.viewLobby.style.display = lobbyVisible ? "" : "none";
-  if (dom.viewHall) dom.viewHall.style.display = hallVisible ? "" : "none";
+  try {
+    if (dom.viewLobby) dom.viewLobby.style.display = lobbyVisible ? "" : "none";
+    if (dom.viewHall) dom.viewHall.style.display = hallVisible ? "" : "none";
+  } catch (error) {
+    console.error("错误位置: [setViews], 原因:", error);
+  }
 }
 
 let currentSelectedAnimalKey = null;
@@ -230,74 +302,109 @@ let pendingStartMode = null;
 let lastRenderedRoundKey = "";
 
 function refreshLobbyUI() {
-  const disabled = !currentSelectedAnimalKey;
-  if (!dom.joinBtn) return;
-  dom.joinBtn.disabled = disabled;
-  dom.joinBtn.style.opacity = disabled ? "0.7" : "1";
+  try {
+    const disabled = !currentSelectedAnimalKey;
+    if (!dom.joinBtn) return;
+    dom.joinBtn.disabled = disabled;
+    dom.joinBtn.style.opacity = disabled ? "0.7" : "1";
+    dom.joinBtn.style.cursor = disabled ? "not-allowed" : "pointer";
+  } catch (error) {
+    console.error("错误位置: [refreshLobbyUI], 原因:", error);
+  }
 }
 
 function refreshViewForJoinState() {
-  const isIn = !!localState.players?.[myPlayerId];
-  setViews({ lobbyVisible: !isIn, hallVisible: isIn });
+  try {
+    const isIn = !!localState.players?.[myPlayerId];
+    setViews({ lobbyVisible: !isIn, hallVisible: isIn });
+  } catch (error) {
+    console.error("错误位置: [refreshViewForJoinState], 原因:", error);
+  }
 }
 
 function renderHallPlayers() {
-  if (!dom.playerList) return;
-  const players = Object.entries(localState.players || {})
-    .map(([id, p]) => ({ id, ...p }))
-    .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
-  dom.playerList.innerHTML = players
-    .map((p) => {
-      const meta = ANIMAL_META[p.animalKey] || { label: p.id, emoji: "❓" };
-      const selected = p.id === myPlayerId ? "animal-card-selected" : "";
-      return `
+  try {
+    if (!dom.playerList) return;
+    const players = Object.entries(localState.players || {})
+      .map(([id, p]) => ({ id, ...p }))
+      .sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0));
+    dom.playerList.innerHTML = players
+      .map((p) => {
+        const meta = ANIMAL_META[p.animalKey] || { label: p.id, emoji: "❓" };
+        const selected = p.id === myPlayerId ? "animal-card-selected" : "";
+        return `
           <div class="animal-card ${selected}" style="pointer-events:none; cursor:default;">
-            <div class="animal-icon"><span class="animal-emoji">${meta.emoji}</span></div>
+            <div class="animal-icon" aria-hidden="true"><span class="animal-emoji" aria-hidden="true">${meta.emoji}</span></div>
             <div class="animal-name">${meta.label}</div>
           </div>
         `;
-    })
-    .join("");
+      })
+      .join("");
+  } catch (error) {
+    console.error("错误位置: [renderHallPlayers], 原因:", error);
+  }
 }
 
 function refreshModeButtons() {
-  if (!dom.modeList) return;
-  const count = Object.keys(localState.players || {}).length;
-  dom.modeList.querySelectorAll(".mode-btn").forEach((btn) => {
-    const required = btn.dataset.mode === "A" ? 1 : 2;
-    btn.disabled = count < required;
-    btn.style.opacity = btn.disabled ? "0.65" : "1";
-  });
+  try {
+    if (!dom.modeList) return;
+    const count = Object.keys(localState.players || {}).length;
+    dom.modeList.querySelectorAll(".mode-btn").forEach((btn) => {
+      const mode = btn.dataset.mode;
+      const required = mode === "A" ? 1 : 2;
+      const disabled = count < required;
+      btn.disabled = disabled;
+      btn.style.opacity = disabled ? "0.65" : "1";
+      btn.style.cursor = disabled ? "not-allowed" : "pointer";
+      btn.style.pointerEvents = disabled ? "none" : "auto";
+    });
+  } catch (error) {
+    console.error("错误位置: [refreshModeButtons], 原因:", error);
+  }
 }
 
 function openOverlayForRound(round) {
   hideAllGameModals();
   closeModal(dom.modalPaused);
   if (isPauseActive()) return openModal(dom.modalPaused);
-  if (round?.subMode === "A") openModal(dom.modalModeA);
-  if (round?.subMode === "B") openModal(dom.modalModeB);
-  if (round?.subMode === "C") openModal(dom.modalModeC);
+  if (!round?.subMode) return;
+  if (round.subMode === "A") openModal(dom.modalModeA);
+  if (round.subMode === "B") openModal(dom.modalModeB);
+  if (round.subMode === "C") openModal(dom.modalModeC);
 }
 
 function ensureRoundRendered(round) {
-  if (!round) return;
-  const key = `${round.id || "?"}_${round.stage || "?"}`;
-  if (key === lastRenderedRoundKey) return;
-  lastRenderedRoundKey = key;
-  openOverlayForRound(round);
-  renderRoundContent(round);
+  try {
+    if (!round) return;
+    const key = `${round.id || "?"}_${round.stage || "?"}`;
+    if (key === lastRenderedRoundKey) return;
+    lastRenderedRoundKey = key;
+    openOverlayForRound(round);
+    renderRoundContent(round);
+  } catch (error) {
+    console.error("错误位置: [ensureRoundRendered], 原因:", error);
+  }
 }
 
 function renderCountdown(round) {
-  if (!round || isPauseActive()) return;
-  const stage = round.stage;
-  const msLeft = (stage.endsWith("_revealed") ? round.autoNextAt : round.endsAt) - nowMs();
-  const label = stage.endsWith("_revealed") ? "秒后自动下一题" : "秒后自动结束";
-  
-  const targetLabel = dom[`mode${round.subMode}CountdownLabel`];
-  const targetCounter = dom[`mode${round.subMode}Countdown`];
-  if (targetLabel) targetLabel.textContent = label;
-  if (targetCounter) targetCounter.textContent = String(msToSecondsCeil(msLeft));
+  try {
+    if (!round || isPauseActive()) return;
+    const stage = round.stage;
+    if (round.subMode === "A" && dom.modeACountdown) {
+      dom.modeACountdownLabel.textContent = stage === "a_revealed" ? "秒后自动下一题" : "秒后自动结束";
+      dom.modeACountdown.textContent = String(msToSecondsCeil((stage === "a_revealed" ? round.autoNextAt : round.endsAt) - nowMs()));
+    }
+    if (round.subMode === "B" && dom.modeBCountdown) {
+      dom.modeBCountdownLabel.textContent = stage === "b_revealed" ? "秒后自动下一题" : "秒后自动结束";
+      dom.modeBCountdown.textContent = String(msToSecondsCeil((stage === "b_revealed" ? round.autoNextAt : round.endsAt) - nowMs()));
+    }
+    if (round.subMode === "C" && dom.modeCCountdown) {
+      dom.modeCCountdownLabel.textContent = stage === "c_revealed" ? "秒后自动下一题" : "秒后自动结束";
+      dom.modeCCountdown.textContent = String(msToSecondsCeil((stage === "c_revealed" ? round.autoNextAt : round.endsAt) - nowMs()));
+    }
+  } catch (error) {
+    console.error("错误位置: [renderCountdown], 原因:", error);
+  }
 }
 
 function renderRoundContent(round) {
@@ -306,325 +413,917 @@ function renderRoundContent(round) {
   if (round.subMode === "C") return renderModeC(round);
 }
 
-// ============================================================
-// 模式渲染逻辑 (Mode A/B/C)
-// ============================================================
-function renderModeA(round) {
-  const stage = round.stage;
-  const subs = getSubmissionsForRound();
-  const canAnswer = stage === "a_answer" && (round.participantIds || []).includes(myPlayerId) && !subs[myPlayerId];
-
-  dom.modeAResults.style.display = "none";
-  dom.modeAWaiting.style.display = "none";
-  dom.modeAOptions.style.display = "none";
-  dom.modeADecode.textContent = round.decode || "";
-  dom.modeAQuestion.textContent = round.question || "正在生成题目...";
-
-  if (stage === "init") {
-    dom.modeAWaiting.style.display = "block";
-    dom.modeAWaiting.textContent = "正在生成题目...";
-  } else if (stage === "a_answer") {
-    dom.modeAOptions.style.display = canAnswer ? "flex" : "none";
-    dom.modeAWaiting.style.display = canAnswer ? "none" : "block";
-    dom.modeAWaiting.textContent = subs[myPlayerId] ? "你已提交，等待揭晓..." : "正在作答...";
-    renderModeAOptions(round.options);
-  } else if (stage === "a_revealed") {
-    dom.modeAQuestion.textContent = "结果揭晓：";
-    dom.modeAResults.style.display = "block";
-    renderModeAResults(round);
+function bindModeAOptionEnabled(enabled) {
+  try {
+    if (!dom.modeAOptions) return;
+    dom.modeAOptions.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.disabled = !enabled;
+      btn.style.opacity = enabled ? "1" : "0.75";
+    });
+  } catch (error) {
+    console.error("错误位置: [bindModeAOptionEnabled], 原因:", error);
   }
 }
 
 function renderModeAOptions(options) {
-  dom.modeAOptions.querySelectorAll(".modal-option").forEach(btn => {
-    btn.querySelector(".modal-option-text").textContent = options?.[btn.dataset.option] || "";
-  });
+  try {
+    if (!dom.modeAOptions || !options) return;
+    dom.modeAOptions.querySelectorAll(".modal-option").forEach((btn) => {
+      const key = btn.dataset.option;
+      const textEl = btn.querySelector(".modal-option-text");
+      if (textEl) textEl.textContent = options[key] || "";
+    });
+  } catch (error) {
+    console.error("错误位置: [renderModeAOptions], 原因:", error);
+  }
+}
+
+function renderModeA(round) {
+  try {
+    const stage = round.stage;
+    const participants = round.participantIds || [];
+    const subs = getSubmissionsForRound();
+    const mySubmitted = !!subs[myPlayerId];
+    const canAnswer = stage === "a_answer" && participants.includes(myPlayerId) && !mySubmitted;
+
+    dom.modeAResults.style.display = "none";
+    dom.modeAWaiting.style.display = "none";
+    dom.modeAOptions.style.display = "none";
+    dom.modeADecode.textContent = round.decode || "";
+    dom.modeAQuestion.textContent = round.question || "等待房主生成题目……";
+
+    if (!stage || stage === "init") {
+      dom.modeAWaiting.style.display = "block";
+      dom.modeAWaiting.textContent = "等待房主生成题目……";
+      return renderCountdown(round);
+    }
+
+    if (stage === "a_answer") {
+      dom.modeAOptions.style.display = canAnswer ? "flex" : "none";
+      dom.modeAWaiting.style.display = canAnswer ? "none" : "block";
+      dom.modeAWaiting.textContent = mySubmitted ? "你已提交，等待揭晓……" : "等待其他玩家完成……";
+      bindModeAOptionEnabled(canAnswer);
+      renderModeAOptions(round.options);
+      return renderCountdown(round);
+    }
+
+    if (stage === "a_revealed") {
+      dom.modeAQuestion.textContent = "本轮揭晓结果：";
+      dom.modeAResults.style.display = "block";
+      dom.modeAWaiting.style.display = "none";
+      dom.modeAOptions.style.display = "none";
+      renderModeAOptions(round.options);
+      renderModeAResults(round);
+      return renderCountdown(round);
+    }
+  } catch (error) {
+    console.error("错误位置: [renderModeA], 原因:", error);
+  }
 }
 
 function renderModeAResults(round) {
-  const results = round.results || {};
-  dom.modeAResultsList.innerHTML = (round.participantIds || []).map(pid => {
-    const meta = ANIMAL_META[localState.players[pid]?.animalKey] || { label: pid, emoji: "❓" };
-    const r = results[pid] || {};
-    return `<div class="modal-results-item">
-      <span>${meta.emoji} ${meta.label}</span>
-      <span>${!r.optionKey ? "未作答" : (r.isCorrect ? "✅ 正确" : "❌ 错误") + " (选" + r.optionKey + ")"}</span>
-    </div>`;
-  }).join("");
+  try {
+    const participants = round.participantIds || [];
+    const results = round.results || {};
+    dom.modeAResultsList.innerHTML = "";
+    participants.forEach((playerId) => {
+      const meta = ANIMAL_META[localState.players[playerId]?.animalKey] || { label: playerId, emoji: "❓" };
+      const r = results[playerId] || {};
+      const optionKey = r.optionKey;
+      const status = !optionKey ? "未作答" : (r.isCorrect ? "回答正确" : "回答错误");
+      const item = document.createElement("div");
+      item.className = "modal-results-item";
+      item.innerHTML = `
+        <div class="modal-results-item-left">
+          <span class="modal-results-item-emoji" aria-hidden="true">${meta.emoji}</span>
+          <span>${meta.label}</span>
+        </div>
+        <div class="modal-results-item-right">
+          ${status}${optionKey ? "（选 " + optionKey + "）" : ""}
+        </div>
+      `;
+      dom.modeAResultsList.appendChild(item);
+    });
+  } catch (error) {
+    console.error("错误位置: [renderModeAResults], 原因:", error);
+  }
+}
+
+function bindModeBOptionsEnabled(enabled) {
+  try {
+    if (!dom.modeBOptions) return;
+    dom.modeBOptions.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.disabled = !enabled;
+      btn.style.opacity = enabled ? "1" : "0.75";
+    });
+  } catch (error) {
+    console.error("错误位置: [bindModeBOptionsEnabled], 原因:", error);
+  }
 }
 
 function renderModeB(round) {
-  const stage = round.stage;
-  const subs = getSubmissionsForRound();
-  dom.modeBResults.style.display = "none";
-  dom.modeBWaiting.style.display = "none";
-  dom.modeBOptions.style.display = "none";
-
-  if (stage === "init") {
-    dom.modeBWaiting.style.display = "block";
-    dom.modeBWaiting.textContent = "正在准备吐槽...";
-  } else if (stage === "b_target_choice") {
-    dom.modeBQuestion.textContent = round.question || "";
-    const isTarget = myPlayerId === round.targetPlayerId;
-    dom.modeBOptions.style.display = isTarget ? "flex" : "none";
-    dom.modeBWaiting.style.display = isTarget ? "none" : "block";
-    dom.modeBWaiting.textContent = "Target 正在选择真心话/谎话...";
-  } else if (stage === "b_vote") {
-    dom.modeBQuestion.textContent = "猜测：Target 选了真心话还是谎话？";
-    const canVote = myPlayerId !== round.targetPlayerId && !subs[myPlayerId];
-    dom.modeBOptions.style.display = canVote ? "flex" : "none";
-    dom.modeBWaiting.style.display = canVote ? "none" : "block";
-    dom.modeBWaiting.textContent = subs[myPlayerId] ? "你已投票，等待揭晓..." : "Target 正在揭晓中...";
-  } else if (stage === "b_revealed") {
-    dom.modeBQuestion.textContent = "雷达揭晓：";
-    dom.modeBResults.style.display = "block";
-    renderModeBResults(round);
+  try {
+    const stage = round.stage;
+    const participants = round.participantIds || [];
+    const subs = getSubmissionsForRound();
+    dom.modeBResults.style.display = "none";
+    dom.modeBWaiting.style.display = "none";
+    dom.modeBOptions.style.display = "none";
+    if (!stage || stage === "init") {
+      dom.modeBWaiting.style.display = "block";
+      dom.modeBWaiting.textContent = "等待房主生成吐槽问题……";
+      return renderCountdown(round);
+    }
+    if (stage === "b_target_choice") {
+      dom.modeBQuestion.textContent = round.question || "";
+      const isTarget = myPlayerId === round.targetPlayerId;
+      const mySubmitted = !!subs[myPlayerId];
+      dom.modeBWaiting.style.display = "block";
+      dom.modeBWaiting.textContent = isTarget ? "你正在选择真心话/谎话……" : "等待 Target 完成选择……";
+      dom.modeBOptions.style.display = isTarget ? "flex" : "none";
+      bindModeBOptionsEnabled(isTarget && !mySubmitted);
+      return renderCountdown(round);
+    }
+    if (stage === "b_vote") {
+      dom.modeBQuestion.textContent = "猜测：Target 选了真心话还是谎话？";
+      const isTarget = myPlayerId === round.targetPlayerId;
+      const mySubmitted = !!subs[myPlayerId];
+      const canVote = !isTarget && participants.includes(myPlayerId) && !mySubmitted;
+      dom.modeBWaiting.style.display = "block";
+      dom.modeBWaiting.textContent = isTarget ? "Target 正在揭晓中……" : (mySubmitted ? "你已投票，等待揭晓……" : "现在请投票猜测！");
+      dom.modeBOptions.style.display = canVote ? "flex" : "none";
+      bindModeBOptionsEnabled(canVote);
+      return renderCountdown(round);
+    }
+    if (stage === "b_revealed") {
+      dom.modeBQuestion.textContent = "雷达结果揭晓：";
+      dom.modeBResults.style.display = "block";
+      renderModeBResults(round);
+      return renderCountdown(round);
+    }
+  } catch (error) {
+    console.error("错误位置: [renderModeB], 原因:", error);
   }
 }
 
 function renderModeBResults(round) {
-  const res = round.results || {};
-  const targetMeta = ANIMAL_META[localState.players[res.targetPlayerId]?.animalKey] || { label: "Target", emoji: "❓" };
-  dom.modeBResultsList.innerHTML = `<div class="modal-results-item"><b>${targetMeta.emoji} ${targetMeta.label}: ${res.targetChoice === "truth" ? "真心话" : "谎话"}</b></div>` + 
-    (round.participantIds || []).filter(pid => pid !== res.targetPlayerId).map(pid => {
-      const meta = ANIMAL_META[localState.players[pid]?.animalKey] || { label: pid, emoji: "❓" };
-      const v = res.votes?.[pid];
-      return `<div class="modal-results-item"><span>${meta.emoji} ${meta.label}</span><span>${!v ? "未投票" : (v.isCorrect ? "猜对了" : "猜错了")}</span></div>`;
-    }).join("");
+  try {
+    const results = round.results || {};
+    const targetId = results.targetPlayerId;
+    const targetChoice = results.targetChoice;
+    const votes = results.votes || {};
+    const participants = round.participantIds || [];
+    const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "Target", emoji: "❓" };
+
+    dom.modeBResultsList.innerHTML = "";
+    const header = document.createElement("div");
+    header.className = "modal-results-item";
+    header.innerHTML = `
+      <div class="modal-results-item-left">
+        <span class="modal-results-item-emoji" aria-hidden="true">${targetMeta.emoji}</span>
+        <span>Target（${targetMeta.label}）</span>
+      </div>
+      <div class="modal-results-item-right">${targetChoice === "truth" ? "选了真心话" : "选了谎话"}</div>
+    `;
+    dom.modeBResultsList.appendChild(header);
+
+    participants.forEach((playerId) => {
+      if (playerId === targetId) return;
+      const meta = ANIMAL_META[localState.players[playerId]?.animalKey] || { label: playerId, emoji: "❓" };
+      const v = votes[playerId];
+      const status = !v ? "未作答" : (v.isCorrect ? "猜对了" : "猜错了");
+      const guessText = !v ? "" : (v.guess === "truth" ? "真心话" : "谎话");
+      const item = document.createElement("div");
+      item.className = "modal-results-item";
+      item.innerHTML = `
+        <div class="modal-results-item-left">
+          <span class="modal-results-item-emoji" aria-hidden="true">${meta.emoji}</span>
+          <span>${meta.label}</span>
+        </div>
+        <div class="modal-results-item-right">${status}${guessText ? "（猜 " + guessText + "）" : ""}</div>
+      `;
+      dom.modeBResultsList.appendChild(item);
+    });
+  } catch (error) {
+    console.error("错误位置: [renderModeBResults], 原因:", error);
+  }
 }
 
 function renderModeC(round) {
-  const stage = round.stage;
-  const subs = getSubmissionsForRound();
-  dom.modeCResults.style.display = "none";
-  dom.modeCWaiting.style.display = "none";
-  dom.modeCOptions.style.display = "none";
-
-  if (stage === "c_mission") {
-    dom.modeCMission.textContent = round.mission || "";
-    const isTarget = myPlayerId === round.targetPlayerId;
-    dom.modeCOptions.style.display = isTarget ? "flex" : "none";
-    dom.modeCWaiting.style.display = isTarget ? "none" : "block";
-    dom.modeCWaiting.textContent = subs[myPlayerId] ? "已完成任务，等待结算..." : "等待 Target 完成任务...";
-  } else if (stage === "c_revealed") {
-    dom.modeCMission.textContent = "任务回顾：";
-    dom.modeCResults.style.display = "block";
-    renderModeCResults(round);
+  try {
+    const stage = round.stage;
+    const subs = getSubmissionsForRound();
+    dom.modeCResults.style.display = "none";
+    dom.modeCWaiting.style.display = "none";
+    dom.modeCOptions.style.display = "none";
+    if (!stage || stage === "init") {
+      dom.modeCMission.textContent = "卧室大冒险";
+      dom.modeCWaiting.style.display = "block";
+      dom.modeCWaiting.textContent = "等待房主生成任务……";
+      return renderCountdown(round);
+    }
+    if (stage === "c_mission") {
+      dom.modeCMission.textContent = round.mission || "";
+      dom.modeCWaiting.style.display = "block";
+      dom.modeCWaiting.textContent = myPlayerId === round.targetPlayerId ? "Target：准备执行任务吧～" : "等待 Target 完成任务……";
+      const mySubmitted = !!subs[myPlayerId];
+      const canDone = myPlayerId === round.targetPlayerId && !mySubmitted;
+      dom.modeCOptions.style.display = canDone ? "flex" : "none";
+      dom.modeCOptions.querySelectorAll(".modal-option").forEach((btn) => {
+        btn.disabled = !canDone;
+        btn.style.opacity = canDone ? "1" : "0.75";
+      });
+      return renderCountdown(round);
+    }
+    if (stage === "c_revealed") {
+      dom.modeCMission.textContent = "本轮任务回顾：";
+      dom.modeCResults.style.display = "block";
+      renderModeCResults(round);
+      return renderCountdown(round);
+    }
+  } catch (error) {
+    console.error("错误位置: [renderModeC], 原因:", error);
   }
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function renderModeCResults(round) {
-  const res = round.results || {};
-  const targetMeta = ANIMAL_META[localState.players[res.targetPlayerId]?.animalKey] || { label: "Target", emoji: "❓" };
-  dom.modeCResultsList.innerHTML = `<div class="modal-results-item">任务：${round.mission}</div>` + 
-    `<div class="modal-results-item">${targetMeta.emoji} ${targetMeta.label}: ${res.doneByTarget ? "✅ 已完成" : "❌ 未完成"}</div>`;
+  try {
+    const results = round.results || {};
+    const targetId = results.targetPlayerId;
+    const doneByTarget = !!results.doneByTarget;
+    const mission = round.mission || "";
+    const participants = round.participantIds || [];
+
+    dom.modeCResultsList.innerHTML = "";
+    const missionItem = document.createElement("div");
+    missionItem.className = "modal-results-item";
+    missionItem.innerHTML = `
+      <div class="modal-results-item-left">
+        <span class="modal-results-item-emoji" aria-hidden="true">🏠</span><span>任务</span>
+      </div>
+      <div class="modal-results-item-right" style="white-space: normal;">${escapeHtml(mission)}</div>
+    `;
+    dom.modeCResultsList.appendChild(missionItem);
+
+    participants.forEach((playerId) => {
+      const meta = ANIMAL_META[localState.players[playerId]?.animalKey] || { label: playerId, emoji: "❓" };
+      const item = document.createElement("div");
+      item.className = "modal-results-item";
+      if (playerId !== targetId) {
+        item.innerHTML = `
+          <div class="modal-results-item-left">
+            <span class="modal-results-item-emoji" aria-hidden="true">${meta.emoji}</span><span>${meta.label}</span>
+          </div>
+          <div class="modal-results-item-right">观看中</div>
+        `;
+      } else {
+        item.innerHTML = `
+          <div class="modal-results-item-left">
+            <span class="modal-results-item-emoji" aria-hidden="true">${meta.emoji}</span><span>${meta.label}</span>
+          </div>
+          <div class="modal-results-item-right">${doneByTarget ? "Target 已完成！" : "时间到，Target 未完成"}</div>
+        `;
+      }
+      dom.modeCResultsList.appendChild(item);
+    });
+  } catch (error) {
+    console.error("错误位置: [renderModeCResults], 原因:", error);
+  }
+}
+
+function tickUI() {
+  try {
+    if (localState.status !== "playing") return;
+    if (isPauseActive()) return;
+    const round = localState.gameState?.round;
+    if (!round) return;
+    renderCountdown(round);
+  } catch (error) {
+    console.error("错误位置: [tickUI], 原因:", error);
+  }
+}
+
+function maybeRenderGame() {
+  try {
+    if (localState.status !== "playing") {
+      hideAllGameModals();
+      closeModal(dom.modalPaused);
+      return;
+    }
+    const round = localState.gameState?.round;
+    if (!round) return;
+    openOverlayForRound(round);
+    ensureRoundRendered(round);
+  } catch (error) {
+    console.error("错误位置: [maybeRenderGame], 原因:", error);
+  }
 }
 
 // ============================================================
-// 分布式逻辑推进 (不再有 hostId)
+// 交互：Lobby/Hall/暂停
 // ============================================================
-async function gameLoopTick() {
-  if (!db || localState.status !== "playing" || isPauseActive()) return;
-  const round = localState.gameState?.round;
-  if (!round) return;
-
-  // 1. 生成题目
-  if (round.stage === "init") {
-    if (await claimActionLock("gen", round.id)) await hostGenerateQuestionForRound(round);
-    return;
-  }
-  // 2. 自动揭晓
-  if (shouldRevealByTime(round)) {
-    if (await claimActionLock("reveal", round.id + "_" + round.stage)) await hostRevealRound(round, getSubmissionsForRound());
-    return;
-  }
-  // 3. 自动下一题
-  if (isAutoNextDue(round)) {
-    if (await claimActionLock("next", round.id)) await hostGenerateNextRoundAndQuestion(round);
-    return;
+async function joinParty() {
+  try {
+    if (!currentSelectedAnimalKey || !db) return;
+    const myPlayerRef = ref(db, `${ROOM_PATH}/players/${myPlayerId}`);
+    await set(myPlayerRef, { animalKey: currentSelectedAnimalKey, joinedAt: serverTimestamp() });
+    try {
+      onDisconnect(myPlayerRef).remove();
+    } catch (error) {
+      console.error("错误位置: [onDisconnect remove], 原因:", error);
+    }
+    await update(roomRootRef(), { status: "hall" });
+  } catch (error) {
+    console.error("错误位置: [joinParty], 原因:", error);
   }
 }
 
 async function requestStartParty(selectedMode) {
   if (!selectedMode || !db) return;
+  // 即使在暂停状态，我们也允许强制重新开始
+  
   try {
     const participantIds = Object.keys(localState.players || {});
-    if (!participantIds.length) return;
+    if (!participantIds.length) {
+      console.error("房间里没有人，无法开始游戏");
+      return;
+    }
 
-    await set(ref(db, `${ROOM_PATH}/locks`), null); // 物理清理所有锁
-    await set(ref(db, `${ROOM_PATH}/submissions`), null);
+    // --- 修改：谁点开始，谁就是这一局的房主，负责生成题目 ---
+    const hostId = myPlayerId; 
+    const roundId = makeRoundId();
+    const subMode = selectedMode === "D" ? pickRandom(["A", "B", "C"]) : selectedMode;
 
+    console.log("🚀 正在强制开启游戏，模式:", selectedMode);
+
+    // --- 修改：删除了所有 lock (锁定) 逻辑，直接更新数据库 ---
     await update(roomRootRef(), {
       status: "playing",
+      submissions: {}, 
       gameState: {
         mode: selectedMode,
+        hostId: hostId,
         pause: { active: false },
         round: {
-          id: makeRoundId(),
-          subMode: selectedMode === "D" ? pickRandom(["A", "B", "C"]) : selectedMode,
+          id: roundId,
+          subMode: subMode,
           stage: "init",
-          participantIds: participantIds
+          participantIds: participantIds,
+          question: null,
+          options: null,
+          correct: null,
+          decode: null,
+          mission: null,
+          targetPlayerId: null,
+          targetChoice: null,
+          results: null,
+          endsAt: null,
+          autoNextAt: null
         }
       }
     });
-  } catch (error) { console.error("开启游戏失败:", error); }
-}
-
+  } catch (error) { // <--- 确保有这行：捕捉错误
+    console.error("❌ 开启游戏失败:", error);
+  }
+} // <--- 确保有这行：结束整个函数
 async function requestPause() {
   if (!db) return;
   try {
-    const round = localState.gameState.round || {};
     await update(roomRootRef(), {
       "gameState.pause": {
         active: true,
-        appliedAtMs: Date.now(),
-        snapshot: { endsAt: round.endsAt || null, autoNextAt: round.autoNextAt || null }
+        requestedBy: myPlayerId,
+        requestedAt: serverTimestamp(),
+        appliedByHost: false,
+        resumedByHost: false,
+        snapshot: null,
+        resumeRequested: false
       }
     });
-  } catch (error) { console.error("暂停失败:", error); }
+  } catch (error) {
+    console.error("错误位置: [requestPause], 原因:", error);
+  }
 }
 
 async function requestContinue() {
   if (!db) return;
   try {
-    const pause = localState.gameState.pause;
-    const delta = Date.now() - (pause.appliedAtMs || Date.now());
-    const patch = { "gameState.pause.active": false };
-    if (pause.snapshot?.endsAt) patch["gameState.round.endsAt"] = pause.snapshot.endsAt + delta;
-    if (pause.snapshot?.autoNextAt) patch["gameState.round.autoNextAt"] = pause.snapshot.autoNextAt + delta;
-    await update(roomRootRef(), patch);
-  } catch (error) { console.error("继续失败:", error); }
+    await update(roomRootRef(), { "gameState.pause.resumeRequested": true });
+  } catch (error) {
+    console.error("错误位置: [requestContinue], 原因:", error);
+  }
 }
 
 async function requestReturnHall() {
   if (!db) return;
-  await update(roomRootRef(), { status: "hall", "gameState.mode": null, "gameState.round": null, "gameState.pause.active": false });
+  try {
+    const hostId = computeHostId(localState.players);
+    if (hostId !== myPlayerId) return;
+    await update(roomRootRef(), {
+      status: "hall",
+      "gameState.mode": null,
+      "gameState.round": null,
+      "gameState.pause": { active: false }
+    });
+  } catch (error) {
+    console.error("错误位置: [requestReturnHall], 原因:", error);
+  }
 }
 
 // ============================================================
-// 提交与生成 (保持原有功能，去掉 claimGenerationLock 旧锁)
+// 提交：Mode A/B/C
 // ============================================================
 async function submitModeA(optionKey) {
   const round = localState.gameState?.round;
-  if (round?.stage !== "a_answer" || isPauseActive()) return;
-  await update(ref(db, `${ROOM_PATH}/submissions/${round.id}/${myPlayerId}`), { optionKey, submittedAt: serverTimestamp() });
+  if (!round || round.subMode !== "A" || round.stage !== "a_answer") return;
+  if (isPauseActive()) return;
+  try {
+    const participants = round.participantIds || [];
+    if (!participants.includes(myPlayerId)) return;
+    const subs = getSubmissionsForRound();
+    if (subs[myPlayerId]) return;
+    await update(ref(db, `${ROOM_PATH}/submissions/${round.id}/${myPlayerId}`), {
+      optionKey,
+      submittedAt: serverTimestamp()
+    });
+  } catch (error) {
+    console.error("错误位置: [submitModeA], 原因:", error);
+  }
 }
 
 async function submitModeB(val) {
   const round = localState.gameState?.round;
-  if (!round || isPauseActive()) return;
-  const path = `${ROOM_PATH}/submissions/${round.id}/${myPlayerId}`;
-  if (round.stage === "b_target_choice" && myPlayerId === round.targetPlayerId) await update(ref(db, path), { choice: val, submittedAt: serverTimestamp() });
-  if (round.stage === "b_vote" && myPlayerId !== round.targetPlayerId) await update(ref(db, path), { guess: val, submittedAt: serverTimestamp() });
+  if (!round || round.subMode !== "B") return;
+  if (isPauseActive()) return;
+  try {
+    const subs = getSubmissionsForRound();
+    if (subs[myPlayerId]) return;
+    if (round.stage === "b_target_choice") {
+      if (round.targetPlayerId !== myPlayerId) return;
+      await update(ref(db, `${ROOM_PATH}/submissions/${round.id}/${myPlayerId}`), { choice: val, submittedAt: serverTimestamp() });
+      return;
+    }
+    if (round.stage === "b_vote") {
+      if (round.targetPlayerId === myPlayerId) return;
+      const participants = round.participantIds || [];
+      if (!participants.includes(myPlayerId)) return;
+      await update(ref(db, `${ROOM_PATH}/submissions/${round.id}/${myPlayerId}`), { guess: val, submittedAt: serverTimestamp() });
+    }
+  } catch (error) {
+    console.error("错误位置: [submitModeB], 原因:", error);
+  }
 }
 
 async function submitModeC_done() {
   const round = localState.gameState?.round;
-  if (round?.stage !== "c_mission" || isPauseActive() || myPlayerId !== round.targetPlayerId) return;
-  await update(ref(db, `${ROOM_PATH}/submissions/${round.id}/${myPlayerId}`), { done: true, submittedAt: serverTimestamp() });
+  if (!round || round.subMode !== "C" || round.stage !== "c_mission") return;
+  if (isPauseActive()) return;
+  try {
+    if (round.targetPlayerId !== myPlayerId) return;
+    const subs = getSubmissionsForRound();
+    if (subs[myPlayerId]) return;
+    await update(ref(db, `${ROOM_PATH}/submissions/${round.id}/${myPlayerId}`), { done: true, submittedAt: serverTimestamp() });
+  } catch (error) {
+    console.error("错误位置: [submitModeC_done], 原因:", error);
+  }
+}
+
+// ============================================================
+// 主控推进（房主）: init -> reveal -> autoNext
+// ============================================================
+function shouldRevealByTime(round) {
+  if (!round.endsAt || typeof round.endsAt !== "number") return false;
+  if (nowMs() < round.endsAt) return false;
+  return ["a_answer", "b_target_choice", "b_vote", "c_mission"].includes(round.stage);
+}
+function isAutoNextDue(round) {
+  if (!round.autoNextAt || typeof round.autoNextAt !== "number") return false;
+  if (nowMs() < round.autoNextAt) return false;
+  return String(round.stage || "").endsWith("_revealed");
+}
+
+async function hostLoopTick() {
+  if (!db) return;
+  if (localState.status !== "playing") return;
+  const round = localState.gameState?.round;
+  if (!round) return;
+  if (!isHostNow()) return;
+
+  try {
+    const pause = localState.gameState.pause || {};
+    if (pause.active) {
+      await hostHandlePause();
+      return;
+    }
+    if (round.stage === "init") return hostGenerateQuestionForRound(round);
+    if (shouldRevealByTime(round)) return hostRevealRound(round, getSubmissionsForRound());
+    if (isAutoNextDue(round)) return hostGenerateNextRoundAndQuestion(round);
+  } catch (error) {
+    console.error("错误位置: [hostLoopTick], 原因:", error);
+  }
+}
+
+async function hostHandlePause() {
+  try {
+    const pause = localState.gameState.pause || {};
+    if (!pause.active) return;
+    const round = localState.gameState.round || {};
+
+    if (!pause.appliedByHost) {
+      const snapshot = {
+        endsAt: typeof round.endsAt === "number" ? round.endsAt : null,
+        autoNextAt: typeof round.autoNextAt === "number" ? round.autoNextAt : null
+      };
+      await update(roomRootRef(), {
+        "gameState.pause": { ...pause, appliedByHost: true, snapshot, appliedAtMs: Date.now() }
+      });
+      return;
+    }
+
+    if (pause.resumeRequested && !pause.resumedByHost) {
+      const delta = Date.now() - (pause.appliedAtMs || Date.now());
+      const patch = {};
+      if (pause.snapshot?.endsAt != null) patch["gameState.round.endsAt"] = pause.snapshot.endsAt + delta;
+      if (pause.snapshot?.autoNextAt != null) patch["gameState.round.autoNextAt"] = pause.snapshot.autoNextAt + delta;
+
+      await update(roomRootRef(), {
+        ...patch,
+        "gameState.pause.active": false,
+        "gameState.pause.resumeRequested": false,
+        "gameState.pause.appliedByHost": false,
+        "gameState.pause.resumedByHost": true
+      });
+    }
+  } catch (error) {
+    console.error("错误位置: [hostHandlePause], 原因:", error);
+  }
+}
+
+async function clearSubmissions() {
+  try {
+    await update(roomRootRef(), { submissions: {} });
+  } catch (error) {
+    console.error("错误位置: [clearSubmissions], 原因:", error);
+  }
 }
 
 async function hostGenerateQuestionForRound(round) {
-  const ids = round.participantIds || Object.keys(localState.players);
-  if (round.subMode === "A") return generateModeAQuestion(round.id, ids);
-  if (round.subMode === "B") return generateModeBQuestion(round.id, ids);
-  if (round.subMode === "C") return generateModeCQuestion(round.id, ids);
+  const subMode = round.subMode;
+  const token = `init_${round.id}_${subMode}_${Date.now()}`;
+  if (!(await claimGenerationLock(token))) return;
+
+  const participantIds = Array.isArray(round.participantIds) && round.participantIds.length ? round.participantIds : Object.keys(localState.players || {});
+  await clearSubmissions();
+
+  if (subMode === "A") return generateModeAQuestion(round.id, participantIds);
+  if (subMode === "B") return generateModeBQuestion(round.id, participantIds);
+  if (subMode === "C") return generateModeCQuestion(round.id, participantIds);
 }
 
-async function hostRevealRound(round, subs) {
+async function hostRevealRound(round, submissionsForRound) {
   const subMode = round.subMode;
-  const revAt = nowMs();
-  if (subMode === "A") {
-    const results = {};
-    round.participantIds.forEach(pid => {
-      const s = subs[pid] || {};
-      results[pid] = { optionKey: s.optionKey || null, isCorrect: s.optionKey === round.correct };
-    });
-    await update(roomRootRef(), { "gameState.round": { ...round, stage: "a_revealed", results, revealedAt: revAt, autoNextAt: revAt + 10000 } });
-  } else if (subMode === "B" && round.stage === "b_target_choice") {
-    const choice = subs[round.targetPlayerId]?.choice || pickRandom(["truth", "lie"]);
-    await update(roomRootRef(), { "gameState.round": { ...round, stage: "b_vote", targetChoice: choice, endsAt: revAt + 20000 } });
-  } else if (subMode === "B" && round.stage === "b_vote") {
-    const votes = {};
-    round.participantIds.forEach(pid => {
-      if (pid === round.targetPlayerId) return;
-      const s = subs[pid] || {};
-      votes[pid] = { guess: s.guess || null, isCorrect: s.guess === round.targetChoice };
-    });
-    await update(roomRootRef(), { "gameState.round": { ...round, stage: "b_revealed", results: { targetPlayerId: round.targetPlayerId, targetChoice: round.targetChoice, votes }, revealedAt: revAt, autoNextAt: revAt + 10000 } });
-  } else if (subMode === "C") {
-    await update(roomRootRef(), { "gameState.round": { ...round, stage: "c_revealed", results: { targetPlayerId: round.targetPlayerId, doneByTarget: !!subs[round.targetPlayerId]?.done }, revealedAt: revAt, autoNextAt: revAt + 10000 } });
-  }
+  if (subMode === "A" && round.stage === "a_answer") return revealModeA(round, submissionsForRound);
+  if (subMode === "B" && round.stage === "b_target_choice") return revealModeB_targetChoice(round, submissionsForRound);
+  if (subMode === "B" && round.stage === "b_vote") return revealModeB_vote(round, submissionsForRound);
+  if (subMode === "C" && round.stage === "c_mission") return revealModeC(round, submissionsForRound);
 }
 
 async function hostGenerateNextRoundAndQuestion(round) {
-  const mode = localState.gameState.mode;
-  await set(ref(db, `${ROOM_PATH}/submissions`), null);
-  await set(ref(db, `${ROOM_PATH}/locks`), null);
-  await update(roomRootRef(), {
-    "gameState.round": {
-      id: makeRoundId(),
-      subMode: mode === "D" ? pickRandom(["A", "B", "C"]) : mode,
-      stage: "init",
-      participantIds: round.participantIds
+  const currentMode = localState.gameState.mode;
+  const participantIds = Array.isArray(round.participantIds) && round.participantIds.length ? round.participantIds : Object.keys(localState.players || {});
+  if (!participantIds.length) return;
+
+  const nextSubMode = currentMode === "D" ? pickRandom(["A", "B", "C"]) : currentMode;
+  const newRoundId = makeRoundId();
+  const token = `next_${newRoundId}_${nextSubMode}_${Date.now()}`;
+  if (!(await claimGenerationLock(token))) return;
+
+  await clearSubmissions();
+  await update(roomRootRef(), { "gameState.round": { ...round, id: newRoundId, subMode: nextSubMode, stage: "init", question: null, options: null, correct: null, decode: null, mission: null, targetPlayerId: null, targetChoice: null, results: null, endsAt: null, autoNextAt: null, participantIds } });
+
+  if (nextSubMode === "A") return generateModeAQuestion(newRoundId, participantIds);
+  if (nextSubMode === "B") return generateModeBQuestion(newRoundId, participantIds);
+  if (nextSubMode === "C") return generateModeCQuestion(newRoundId, participantIds);
+}
+
+// ============================================================
+// Gemini 生成：Mode A/B/C（兜底）
+// ============================================================
+async function generateModeAQuestion(roundId, participantIds) {
+  if (!ensureGeminiModel()) return applyModeAFallback(roundId, participantIds);
+  try {
+    const fallback = { question: "（备用）有趣的冷知识：世界上最大的沙漠是哪个？", options: { A: "撒哈拉沙漠", B: "南极洲沙漠", C: "戈壁沙漠", D: "戈壁滩沙漠" }, correct: "B", decode: "（备用）南极洲虽然下雪少，但降水极少，气候条件符合“沙漠”判定，所以它是最大的沙漠。" };
+    const prompt = `为 Mode A 生成“百科小冷知识选择题”（难度不高、适合青少年及以上）。
+只输出严格有效 JSON，格式为：{"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct":"A|B|C|D","decode":"..."}。Language: 简体中文；不要提及与节目/剧情相关内容。`;
+    const result = await geminiModel.generateContent(prompt);
+    const rawText = result?.response ? result.response.text() : "";
+    const parsed = parseJsonSafely(rawText);
+    const payload = { question: parsed?.question || fallback.question, options: parsed?.options || fallback.options, correct: parsed?.correct || fallback.correct, decode: parsed?.decode || fallback.decode };
+
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 20) * 1000;
+    await update(roomRootRef(), { "gameState.round": { ...localState.gameState.round, id: roundId, subMode: "A", stage: "a_answer", participantIds, question: payload.question, options: payload.options, correct: payload.correct, decode: payload.decode, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+  } catch (error) {
+    console.error("错误位置: [generateModeAQuestion], 原因:", error);
+    await applyModeAFallback(roundId, participantIds);
+  }
+}
+
+async function applyModeAFallback(roundId, participantIds) {
+  const fallback = { question: "（备用）有趣的冷知识：世界上最大的沙漠是哪个？", options: { A: "撒哈拉沙漠", B: "南极洲沙漠", C: "戈壁沙漠", D: "戈壁滩沙漠" }, correct: "B", decode: "（备用）南极洲虽然下雪少，但降水极少，气候条件符合“沙漠”判定，所以它是最大的沙漠。" };
+  try {
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 20) * 1000;
+    await update(roomRootRef(), { "gameState.round": { ...localState.gameState.round, id: roundId, subMode: "A", stage: "a_answer", participantIds, question: fallback.question, options: fallback.options, correct: fallback.correct, decode: fallback.decode, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+  } catch (error) {
+    console.error("错误位置: [applyModeAFallback], 原因:", error);
+  }
+}
+
+async function generateModeBQuestion(roundId, participantIds) {
+  if (!ensureGeminiModel()) return applyModeBFallback(roundId, participantIds);
+  try {
+    const targetPlayerId = pickRandom(participantIds);
+    const fallback = { question: "（备用）你有没有那种“别人看不出来但你自己很坚持”的小习惯？说出来我都替你尴尬一下。" };
+    const prompt = `为 Mode B 生成一个针对 Target 的日常小癖好/轻微社死吐槽问题。只输出严格有效 JSON：{"question":"..."}。
+Language: 简体中文；避免恋爱、男士、性或露骨内容；不要包含“真/假/Truth/Lie”等字眼。`;
+    const result = await geminiModel.generateContent(prompt);
+    const rawText = result?.response ? result.response.text() : "";
+    const parsed = parseJsonSafely(rawText);
+    const question = parsed?.question || fallback.question;
+
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.B || 20) * 1000;
+    await update(roomRootRef(), { "gameState.round": { ...localState.gameState.round, id: roundId, subMode: "B", stage: "b_target_choice", participantIds, targetPlayerId, question, targetChoice: null, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+  } catch (error) {
+    console.error("错误位置: [generateModeBQuestion], 原因:", error);
+    await applyModeBFallback(roundId, participantIds);
+  }
+}
+
+async function applyModeBFallback(roundId, participantIds) {
+  try {
+    const targetPlayerId = pickRandom(participantIds);
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.B || 20) * 1000;
+    await update(roomRootRef(), { "gameState.round": { ...localState.gameState.round, id: roundId, subMode: "B", stage: "b_target_choice", participantIds, targetPlayerId, question: "（备用）你有没有那种“别人看不出来但你自己很坚持”的小习惯？说出来我都替你尴尬一下。", targetChoice: null, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+  } catch (error) {
+    console.error("错误位置: [applyModeBFallback], 原因:", error);
+  }
+}
+
+async function generateModeCQuestion(roundId, participantIds) {
+  if (!ensureGeminiModel()) return applyModeCFallback(roundId, participantIds);
+  try {
+    const targetPlayerId = pickRandom(participantIds);
+    const fallback = { mission: "（备用）用一张便利贴写一句“我今天要乖一点”，贴在桌角 10 秒，然后假装自己很认真。" };
+    const prompt = `为 Mode C 生成一个适合在卧室/客厅用常见物品完成的搞笑小任务。只输出严格有效 JSON：{"mission":"..."}。
+mission 简体中文，避免恋爱、男士、性或露骨内容。`;
+    const result = await geminiModel.generateContent(prompt);
+    const rawText = result?.response ? result.response.text() : "";
+    const parsed = parseJsonSafely(rawText);
+    const mission = parsed?.mission || fallback.mission;
+
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.C || 30) * 1000;
+    await update(roomRootRef(), { "gameState.round": { ...localState.gameState.round, id: roundId, subMode: "C", stage: "c_mission", participantIds, targetPlayerId, mission, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+  } catch (error) {
+    console.error("错误位置: [generateModeCQuestion], 原因:", error);
+    await applyModeCFallback(roundId, participantIds);
+  }
+}
+
+async function applyModeCFallback(roundId, participantIds) {
+  try {
+    const targetPlayerId = pickRandom(participantIds);
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.C || 30) * 1000;
+    await update(roomRootRef(), { "gameState.round": { ...localState.gameState.round, id: roundId, subMode: "C", stage: "c_mission", participantIds, targetPlayerId, mission: "（备用）用一张便利贴写一句“我今天要乖一点”，贴在桌角 10 秒，然后假装自己很认真。", startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+  } catch (error) {
+    console.error("错误位置: [applyModeCFallback], 原因:", error);
+  }
+}
+
+// ============================================================
+// Reveal（host 写回 gameState）
+// ============================================================
+async function revealModeA(round, submissionsForRound) {
+  try {
+    const participantIds = round.participantIds || [];
+    const results = {};
+    participantIds.forEach((playerId) => {
+      const sub = submissionsForRound[playerId] || {};
+      const optionKey = sub.optionKey || null;
+      const isCorrect = optionKey ? optionKey === round.correct : null;
+      results[playerId] = { optionKey, isCorrect };
+    });
+    const revealedAt = nowMs();
+    await update(roomRootRef(), { "gameState.round": { ...round, stage: "a_revealed", results, revealedAt, autoNextAt: revealedAt + 10000 } });
+  } catch (error) {
+    console.error("错误位置: [revealModeA], 原因:", error);
+  }
+}
+
+async function revealModeB_targetChoice(round, submissionsForRound) {
+  try {
+    const targetId = round.targetPlayerId;
+    const targetSub = submissionsForRound[targetId] || {};
+    const targetChoice = targetSub.choice || pickRandom(["truth", "lie"]);
+    const revealedAt = nowMs();
+    await update(roomRootRef(), { "gameState.round": { ...round, stage: "b_vote", targetChoice, endsAt: revealedAt + (GAMEMODE_DURATION_SECONDS.B || 20) * 1000, autoNextAt: null, results: null } });
+  } catch (error) {
+    console.error("错误位置: [revealModeB_targetChoice], 原因:", error);
+  }
+}
+
+async function revealModeB_vote(round, submissionsForRound) {
+  try {
+    const targetId = round.targetPlayerId;
+    const targetChoice = round.targetChoice || "truth";
+    const participantIds = round.participantIds || [];
+    const votes = {};
+    participantIds.forEach((playerId) => {
+      if (playerId === targetId) return;
+      const sub = submissionsForRound[playerId] || {};
+      const guess = sub.guess || null;
+      if (!guess) return;
+      votes[playerId] = { guess, isCorrect: guess === targetChoice };
+    });
+    const revealedAt = nowMs();
+    const results = { targetPlayerId: targetId, targetChoice, votes };
+    await update(roomRootRef(), { "gameState.round": { ...round, stage: "b_revealed", results, revealedAt, autoNextAt: revealedAt + 10000 } });
+  } catch (error) {
+    console.error("错误位置: [revealModeB_vote], 原因:", error);
+  }
+}
+
+async function revealModeC(round, submissionsForRound) {
+  try {
+    const targetId = round.targetPlayerId;
+    const targetSub = submissionsForRound[targetId] || {};
+    const doneByTarget = !!targetSub.done;
+    const revealedAt = nowMs();
+    await update(roomRootRef(), { "gameState.round": { ...round, stage: "c_revealed", results: { targetPlayerId: targetId, doneByTarget }, revealedAt, autoNextAt: revealedAt + 10000 } });
+  } catch (error) {
+    console.error("错误位置: [revealModeC], 原因:", error);
+  }
+}
+
+// ============================================================
+// 初始化与事件绑定
+// ============================================================
+let listenersAttached = false;
+function attachFirebaseListeners() {
+  if (listenersAttached || !db) return;
+  listenersAttached = true;
+  try {
+    onValue(playersRef(), (snap) => {
+      localState.players = snap.val() || {};
+      refreshViewForJoinState();
+      renderHallPlayers();
+      refreshModeButtons();
+      maybeRenderGame();
+    });
+    onValue(statusRef(), (snap) => {
+      localState.status = snap.val() || "lobby";
+      refreshViewForJoinState();
+      maybeRenderGame();
+    });
+    onValue(gameStateRef(), (snap) => {
+      localState.gameState = snap.val() || {};
+      maybeRenderGame();
+    });
+    onValue(submissionsRef(), (snap) => {
+      localState.submissions = snap.val() || {};
+      maybeRenderGame();
+    });
+  } catch (error) {
+    console.error("错误位置: [attachFirebaseListeners], 原因:", error);
+  }
+}
+
+function bindDomEvents() {
+  try {
+    if (dom.animalList) {
+      dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          try {
+            const animalKey = card.dataset.animal;
+            const wasSelected = currentSelectedAnimalKey === animalKey;
+            dom.animalList.querySelectorAll(".animal-card").forEach((c) => c.classList.remove("animal-card-selected"));
+            currentSelectedAnimalKey = wasSelected ? null : animalKey;
+            if (currentSelectedAnimalKey) card.classList.add("animal-card-selected");
+            refreshLobbyUI();
+          } catch (error) {
+            console.error("错误位置: [动物选择 click], 原因:", error);
+          }
+        });
+      });
     }
-  });
-}
-
-// ============================================================
-// Gemini 生成函数
-// ============================================================
-async function generateModeAQuestion(roundId, ids) {
-  let payload = { question: "（备用）世界上最大的沙漠是？", options: { A: "撒哈拉", B: "南极洲", C: "戈壁", D: "塔克拉玛干" }, correct: "B", decode: "南极洲降水极少，符合沙漠定义。" };
-  if (ensureGeminiModel()) {
-    try {
-      const res = await geminiModel.generateContent(`为 Mode A 生成百科小知识 JSON: {"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct":"A|B|C|D","decode":"..."}`);
-      const parsed = parseJsonSafely(res?.response?.text());
-      if (parsed) payload = parsed;
-    } catch (e) { console.error(e); }
+  } catch (error) {
+    console.error("错误位置: [bind animalList], 原因:", error);
   }
-  const start = nowMs();
-  await update(roomRootRef(), { "gameState.round": { ...payload, id: roundId, subMode: "A", stage: "a_answer", participantIds: ids, startedAt: start, endsAt: start + 20000 } });
-}
 
-async function generateModeBQuestion(roundId, ids) {
-  let q = "（备用）你最不能忍受的一种食物搭配是什么？";
-  const target = pickRandom(ids);
-  if (ensureGeminiModel()) {
-    try {
-      const res = await geminiModel.generateContent(`为 Mode B 生成一个针对 Target 的日常吐槽问题 JSON: {"question":"..."}`);
-      q = parseJsonSafely(res?.response?.text())?.question || q;
-    } catch (e) { console.error(e); }
+  try {
+    dom.joinBtn?.addEventListener("click", () => joinParty().catch((e) => console.error("错误位置: [joinBtn click], 原因:", e)));
+  } catch (error) {
+    console.error("错误位置: [bind joinBtn], 原因:", error);
   }
-  const start = nowMs();
-  await update(roomRootRef(), { "gameState.round": { id: roundId, subMode: "B", stage: "b_target_choice", participantIds: ids, targetPlayerId: target, question: q, startedAt: start, endsAt: start + 20000 } });
-}
 
-async function generateModeCQuestion(roundId, ids) {
-  let m = "（备用）用一张纸巾给自己做一个简易领结并展示 5 秒。";
-  const target = pickRandom(ids);
-  if (ensureGeminiModel()) {
-    try {
-      const res = await geminiModel.generateContent(`为 Mode C 生成一个卧室搞笑任务 JSON: {"mission":"..."}`);
-      m = parseJsonSafely(res?.response?.text())?.mission || m;
-    } catch (e) { console.error(e); }
+  try {
+    dom.modeList?.querySelectorAll(".mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        try {
+          pendingStartMode = btn.dataset.mode;
+          openModal(dom.modalConfirmStart);
+        } catch (error) {
+          console.error("错误位置: [mode btn click], 原因:", error);
+        }
+      });
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeList], 原因:", error);
   }
-  const start = nowMs();
-  await update(roomRootRef(), { "gameState.round": { id: roundId, subMode: "C", stage: "c_mission", participantIds: ids, targetPlayerId: target, mission: m, startedAt: start, endsAt: start + 30000 } });
+
+  try {
+    dom.btnConfirmStart?.addEventListener("click", () => {
+      closeModal(dom.modalConfirmStart);
+      requestStartParty(pendingStartMode).catch((e) => console.error("错误位置: [confirm start click], 原因:", e));
+    });
+    dom.btnCancelStart?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
+    dom.btnConfirmStartClose?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
+  } catch (error) {
+    console.error("错误位置: [bind confirm modal], 原因:", error);
+  }
+
+  try {
+    dom.btnPauseContinue?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause continue], 原因:", e)));
+    dom.btnPauseClose?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause close], 原因:", e)));
+    dom.btnPauseReturnHall?.addEventListener("click", () => requestReturnHall().catch((e) => console.error("错误位置: [pause return hall], 原因:", e)));
+  } catch (error) {
+    console.error("错误位置: [bind pause modal], 原因:", error);
+  }
+
+  try {
+    dom.modeAAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort A], 原因:", e)));
+    dom.modeBAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort B], 原因:", e)));
+    dom.modeCAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort C], 原因:", e)));
+  } catch (error) {
+    console.error("错误位置: [bind abort buttons], 原因:", error);
+  }
+
+  try {
+    dom.modeAOptions?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeA(btn.dataset.option).catch((e) => console.error("错误位置: [ModeA option], 原因:", e)));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeA options], 原因:", error);
+  }
+
+  try {
+    dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeB options], 原因:", error);
+  }
+
+  try {
+    dom.modeCOptions?.querySelectorAll(".modal-option").forEach(() => {
+      // 仅一个按钮，data-option 可忽略
+    });
+    dom.modeCOptions?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeC_done().catch((e) => console.error("错误位置: [ModeC done], 原因:", e)));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeC options], 原因:", error);
+  }
 }
 
-// ============================================================
-// 主启动
-// ============================================================
 async function main() {
   bindDom();
   bindDomEvents();
   refreshLobbyUI();
-  if (await initFirebase()) {
-    attachFirebaseListeners();
-    setInterval(() => tickUI(), 250);
-    setInterval(() => gameLoopTick().catch(e => console.error(e)), 1000);
-  }
+
+  const ok = await initFirebase();
+  if (!ok) return;
+  attachFirebaseListeners();
+  refreshViewForJoinState();
+  renderHallPlayers();
+  refreshModeButtons();
+  setInterval(() => tickUI(), 250);
+  setInterval(() => hostLoopTick().catch((e) => console.error("错误位置: [hostLoopTick interval], 原因:", e)), 800);
 }
 
-document.addEventListener("DOMContentLoaded", main);
+document.addEventListener("DOMContentLoaded", () => {
+  main().catch((error) => console.error("错误位置: [DOMContentLoaded main], 原因:", error));
+});
