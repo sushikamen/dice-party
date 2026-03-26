@@ -780,37 +780,6 @@ async function requestStartParty(selectedMode) {
     console.error("引擎初始化失败:", error);
   }
 }
-// 初始化游戏状态引擎（支持任意玩家发起强行重置）
-async function requestStartParty(selectedMode) {
-  if (!selectedMode || !db) return;
-  
-  try {
-    const participantIds = Object.keys(localState.players || {});
-    if (!participantIds.length) return;
-
-    const roundId = makeRoundId();
-    const subMode = selectedMode === "D" ? pickRandom(["A", "B", "C"]) : selectedMode;
-
-    await update(roomRootRef(), {
-      status: "playing",
-      submissions: {}, 
-      gameState: {
-        mode: selectedMode,
-        pause: { active: false },
-        round: {
-          id: roundId,
-          subMode: subMode,
-          stage: "init",
-          participantIds: participantIds,
-          question: null, options: null, correct: null, decode: null, mission: null,
-          targetPlayerId: null, targetChoice: null, results: null, endsAt: null, autoNextAt: null
-        }
-      }
-    });
-  } catch (error) {
-    console.error("引擎初始化失败:", error);
-  }
-}
 
 // 调度当前回合的生成模型
 async function hostGenerateQuestionForRound(round) {
