@@ -370,23 +370,6 @@ function renderCountdown(round) {
   }
 }
 
-function shouldRevealEarly(round, subs) {
-  if (!round || !round.stage || !subs) return false;
-  const participants = round.participantIds || [];
-  const targetId = round.targetPlayerId;
-
-  if (round.stage === "a_answer") {
-    return participants.length > 0 && participants.every(p => subs[p]);
-  }
-  if (round.stage === "b_target_choice" || round.stage === "c_mission") {
-    return !!subs[targetId];
-  }
-  if (round.stage === "b_vote") {
-    const voters = participants.filter(p => p !== targetId);
-    return voters.length > 0 && voters.every(p => subs[p]);
-  }
-  return false;
-}
 
 function renderRoundContent(round) {
   if (round.subMode === "A") return renderModeA(round);
