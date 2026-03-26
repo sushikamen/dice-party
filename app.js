@@ -152,10 +152,39 @@ function isPauseActive() {
 }
 
 function isHostNow() {
-  const hostId = computeHostId(localState.players);
-  return !!(hostId && hostId === myPlayerId);
+  const calculatedHostId = computeHostId(localState.players);
+  const isMatch = !!(calculatedHostId && calculatedHostId === myPlayerId);
+  
+  // 仅在状态为 playing 时输出，避免干扰 lobby 阶段
+  if (localState.status === "playing") {
+    console.log(`[主机诊断] 计算出的房主: ${calculatedHostId} | 我的ID: ${myPlayerId} | 匹配: ${isMatch}`);
+  }
+  return isMatch;
 }
 
+// 在 hostLoopTick 开头增加状态监控
+async function hostLoopTick() {
+  if (!db) return;
+  if (localState.status !== "playing") return;
+
+  const round = localState.gameState?.round;
+  if (!round) {
+    console.warn("[逻辑警告] 游戏已开始但 gameState.round 为空");
+    return;
+  }
+
+  if (!isHostNow()) return;
+
+  // 如果通过了 isHostNow，说明你是当前逻辑的执行者
+  console.log(`[逻辑执行] 我是当前执行者，阶段: ${round.stage}`);
+  
+  try {
+    const pause = localState.gameState.pause || {};
+    // ... 原有逻辑
+  } catch (error) {
+    console.error("hostLoopTick 执行异常:", error);
+  }
+}
 function getSubmissionsForRound() {
   const roundId = localState.gameState?.round?.id;
   if (!roundId) return {};
@@ -795,22 +824,27 @@ async function requestStartParty(selectedMode) {
     console.error("❌ 开启游戏失败:", error);
   }
 } // <--- 确保有这行：结束整个函数
+// 替换原有的 requestPause 函数
 async function requestPause() {
   if (!db) return;
   try {
+    const round = localState.gameState?.round || {};
+    // 直接设置 active 为 true，并写入当前时间快照
     await update(roomRootRef(), {
       "gameState.pause": {
         active: true,
+        appliedByHost: true, // 强制标记为已应用
         requestedBy: myPlayerId,
-        requestedAt: serverTimestamp(),
-        appliedByHost: false,
-        resumedByHost: false,
-        snapshot: null,
-        resumeRequested: false
+        appliedAtMs: Date.now(),
+        snapshot: {
+          endsAt: round.endsAt || null,
+          autoNextAt: round.autoNextAt || null
+        }
       }
     });
+    console.log("[指令] 暂停请求已强制下发");
   } catch (error) {
-    console.error("错误位置: [requestPause], 原因:", error);
+    console.error("强制暂停失败:", error);
   }
 }
 
@@ -978,15 +1012,36 @@ async function clearSubmissions() {
 
 async function hostGenerateQuestionForRound(round) {
   const subMode = round.subMode;
-  const token = `init_${round.id}_${subMode}_${Date.now()}`;
-  if (!(await claimGenerationLock(token))) return;
+  
+  // --- 修改 1：使用通用的竞争锁 ---
+  // 锁的标识符直接关联当前回合 ID。
+  // 只有第一个成功写入 partyRoom/locks/generate_{roundId} 的玩家会继续。
+  if (!(await claimActionLock("generate", round.id))) {
+    console.log(`[并发拦截] 回合 ${round.id} 的题目已有其他玩家在生成中。`);
+    return;
+  }
 
-  const participantIds = Array.isArray(round.participantIds) && round.participantIds.length ? round.participantIds : Object.keys(localState.players || {});
-  await clearSubmissions();
+  console.log(`[执行生成] 成功抢占生成权，正在调用 Gemini 生成模式 ${subMode} 的内容...`);
 
-  if (subMode === "A") return generateModeAQuestion(round.id, participantIds);
-  if (subMode === "B") return generateModeBQuestion(round.id, participantIds);
-  if (subMode === "C") return generateModeCQuestion(round.id, participantIds);
+  // --- 修改 2：确保参与者列表完整 ---
+  const participantIds = Array.isArray(round.participantIds) && round.participantIds.length 
+    ? round.participantIds 
+    : Object.keys(localState.players || {});
+
+  // --- 修改 3：前置清理工作 ---
+  try {
+    // 生成新题前，物理清空上一轮的提交记录
+    await clearSubmissions();
+    
+    // 分发生成逻辑
+    if (subMode === "A") return await generateModeAQuestion(round.id, participantIds);
+    if (subMode === "B") return await generateModeBQuestion(round.id, participantIds);
+    if (subMode === "C") return await generateModeCQuestion(round.id, participantIds);
+    
+  } catch (error) {
+    console.error(`[生成失败] 模式 ${subMode} 过程中出现异常:`, error);
+    // 可选：如果生成彻底失败，可以在这里移除锁，允许其他人重试
+  }
 }
 
 async function hostRevealRound(round, submissionsForRound) {
