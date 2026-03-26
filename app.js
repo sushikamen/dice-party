@@ -184,6 +184,58 @@ const MODE_A_FALLBACK_POOL = [
   { question: "走在干燥的冬天里，你用手去拉金属门把手，瞬间被“啪”地电了一下，疼得猛缩手。这个微小的静电火花，瞬间的电压大约有多高？", options: { A: "不到5伏特", B: "大约220伏特，和家用电一样", C: "起码在3000伏特到上万伏特之间", D: "几百万伏特" }, correct: "C", decode: "在干燥环境中，衣服摩擦在人体表面积累的静电荷无处释放。当你靠近良导体（金属）时，强大的局部电场会直接击穿空气间隙引发火花放电。要击穿1毫米的干燥空气，电势差通常需要达到3000伏特以上。虽然电压高得惊人，但由于放电时间极短（纳秒级）且总电荷量极小，因此它产生的瞬时电流极其微弱，不足以对人体造成实质性病理伤害（静电学理论与空气介电击穿物理机制）。" }
 ];
 
+const MODE_B_FALLBACK_POOL = [
+  { question: "你有没有在街上走错路，为了掩饰尴尬，故意停下来假装回信息，然后再猛地转弯？" },
+  { question: "你是不是曾经在理发店对剪坏的头发违心狂夸理发师，出门后立刻戴上帽子？" },
+  { question: "你有没有在电梯里遇到半生不熟的同事或同学，为了不打招呼，假装一直在看毫无信号的手机屏幕？" },
+  { question: "你是不是有一件睡衣，明明已经破洞或起球到惨不忍睹，但就是觉得它有灵魂，舍不得扔？" },
+  { question: "你有没有过这种经历：点完外卖后一直从猫眼偷看，非要等外卖员彻底走远了，才敢开门拿外卖？" },
+  { question: "你是不是经常把网上的干货视频或者文章点击“收藏”，并且在心里觉得“收藏了就等于我已经学会了”？" },
+  { question: "你有没有在洗澡的时候，突然戏瘾发作，把自己想象成某个悲情MV的女主角或者开演唱会的巨星？" },
+  { question: "你是不是曾经试图用脚趾去夹起掉在地上的遥控器或纸巾，结果搞得自己脚趾抽筋？" },
+  { question: "你有没有在群里发了一张合照，其实发之前只仔细P了自己，然后对其他人只用了极其敷衍的一键美颜？" },
+  { question: "你是不是经常在家里一个人呆着的时候，用一种极其奇怪的自创语言或者口音自言自语？" },
+  { question: "你有没有为了逃避某个不想去的社交局，编造过极其离谱但当时自己演得深信不疑的借口？" },
+  { question: "你是不是在发完一条精心配图的朋友圈后，接下来的半小时内每隔一分钟就要切进去看有没有人点赞？" },
+  { question: "你有没有在试衣间照镜子时觉得自己是天下最美的超模，结果买回家穿上一次就再也不想碰了？" },
+  { question: "你是不是那种会在极度焦虑、事情做不完的拖延症晚期，突然开始极其认真地打扫房间卫生的人？" },
+  { question: "你有没有在看一部极其煽情的电影时，发现旁边的人没哭，为了合群硬生生把眼泪憋了回去？" },
+  { question: "你是不是曾经在路上看到一只很可爱的狗，在心里默默给它配音，甚至编出了一整套狗的内心戏？" },
+  { question: "你有没有在别人讲了一个你完全没听懂的笑话时，为了显得自己懂了，跟着大家笑得比谁都大声？" },
+  { question: "你是不是曾经把自己聊天记录里的某句话反复读了好几遍，觉得自己当时的发言简直逻辑严密、完美无缺？" },
+  { question: "你有没有在走路时不小心平地摔了一下，爬起来的第一件事不是检查伤口，而是环顾四周看有没有人发现？" },
+  { question: "你是不是经常在脑子里反复预演一段即将发生的对话，连对方怎么反驳、你该怎么一针见血地回击都排练好了？" },
+  { question: "你有没有为了少洗一个碗或者一个盘子，直接端着电饭锅或者炒菜锅站在厨房里把饭吃完？" },
+  { question: "你是不是曾经在网上和别人激情辩论，打了一大段字，最后觉得“算了不想理这种人”，又全部删掉没有发？" },
+  { question: "你有没有在听音乐的时候，幻想自己正在某个极其炫酷的场景里，配合着鼓点走路，觉得自己气场两米八？" },
+  { question: "你是不是有一家最常去的小店，但如果有一天老板突然热情地叫出你的名字，你就会因为社恐再也不去了？" },
+  { question: "你有没有在深夜网购时，把购物车塞得满满当当，体验了一把疯狂消费的快感，然后第二天早上全部清空？" },
+  { question: "你是不是曾经在外面上厕所时，为了不让隔壁听到声音，一边按冲水马桶一边试图掩盖自己的动静？" },
+  { question: "你有没有过这种迷之自信：只要自己不去看银行卡余额，那笔钱就好像永远没有被花掉一样？" },
+  { question: "你是不是经常把闹钟设置成每隔五分钟响一次，但最后依然能在一堆闹钟的交响乐中安然入睡？" },
+  { question: "你有没有在看到一个好笑的段子时，其实脸上毫无表情，但在微信回复里却打出了“哈哈哈哈哈哈笑死我了”？" },
+  { question: "你是不是曾经试图跟着网上的美妆博主学一个极其复杂的眼妆，最后画出来像被人打了一拳，只能默默洗掉？" },
+  { question: "你有没有在看恐怖片的时候，用手指缝挡住眼睛，并且试图通过把音量调到零来降低恐惧感？" },
+  { question: "你是不是经常把需要退换货的快递放在门口，每天出门都假装看不见它，直到彻底过了退换货期限？" },
+  { question: "你有没有在跟别人微信聊天时，不小心发错了极其尴尬的内容，在两分钟撤回极限时间内感受到了心跳骤停？" },
+  { question: "你是不是曾经为了看一条已经被对方删除的朋友圈，在脑海里反复进行推理，试图复原当时的八卦全貌？" },
+  { question: "你有没有在理发店洗头的时候，因为不知道眼睛该看哪里，只能假装闭目养神，其实眼球在眼皮底下疯狂乱转？" },
+  { question: "你是不是经常在收拾东西的时候，翻出一样旧物，然后陷入长达半小时的痛苦回忆，最后完全忘记了自己要收拾房间？" },
+  { question: "你有没有在别人夸你今天衣服很好看的时候，非要极其谦虚地补上一句“没有啦这是几十块钱随便买的”？" },
+  { question: "你是不是曾经在地铁或公交上，因为太困不仅睡着了，还猛地点头甚至轻微打呼噜，醒来后立刻装作在思考人生？" },
+  { question: "你有没有在别人给你看他手机里的照片时，非常害怕自己手滑向左或向右滑到了不该看的东西？" },
+  { question: "你是不是经常在喝那种标榜“零糖零卡”的饮料时，有一种自己马上就要变瘦了的极度不真实的幻觉？" },
+  { question: "你有没有在跟朋友吐槽另一个人时，不小心把截图发给了当事人本人，并且试图用极其生硬的理由圆回来？" },
+  { question: "你是不是曾经为了在朋友圈发一句很有哲理的文案，花了半个小时在各大搜索平台上找素材，其实根本看不懂？" },
+  { question: "你有没有在买衣服的时候，导购一直跟在后面夸你，你因为不好意思拒绝，硬着头皮买下了一件根本不喜欢的衣服？" },
+  { question: "你是不是经常在做了一件极度丢脸的事情后，在接下来的几年里，只要一到深夜，大脑就会自动重播那个画面疯狂折磨你？" },
+  { question: "你有没有在餐厅吃饭，明明服务员上错了菜，但因为不想引发争执，干脆将错就错默默把它吃完了？" },
+  { question: "你是不是曾经在健身房里，因为不会用某个器械，又不想问别人，只能假装自己就是在进行某种极度前卫的创新拉伸？" },
+  { question: "你有没有在跟别人合租或住校时，为了避免在客厅和室友碰面尬聊，硬生生在房间里憋尿憋了半个小时？" },
+  { question: "你是不是经常在拆开零食包装袋后，告诉自己“只吃一口”，结果五分钟后把整个袋子都舔得干干净净？" },
+  { question: "你有没有在看视频遇到有高能预警或者恐怖画面的弹幕时，会下意识地把手机屏幕拿得离自己远远的？" },
+  { question: "你是不是曾经试图在日记本或者备忘录里立下极其宏大的年度计划，结果到了年底发现连第一条的一半都没完成？" }
+];
 
 const MODE_C_FALLBACK_POOL = [
   { mission: "找一个枕头，深情地给它读一段你手机里最近的外卖订单，并且要读出莎士比亚戏剧的悲凉感。" },
@@ -237,30 +289,9 @@ const MODE_C_FALLBACK_POOL = [
   { mission: "表演一段极其夸张的假哭，眼泪掉不下来没关系，但抽泣的动作和悲伤的肢体语言必须做到奥斯卡影后级别。" }
 ];
 
-function getNextFallbackMissionC() {
-  const usedIndices = localState.gameState?.usedModeCIndices || [];
-  let availableIndices = [];
-
-  for (let i = 0; i < MODE_C_FALLBACK_POOL.length; i++) {
-    if (!usedIndices.includes(i)) availableIndices.push(i);
-  }
-
-  // 如果所有题目都出过了，则清空记忆，重新开始新一轮循环
-  if (availableIndices.length === 0) {
-    availableIndices = MODE_C_FALLBACK_POOL.map((_, i) => i);
-  }
-
-  const pickedIndex = pickRandom(availableIndices);
-  
-  const newUsedIndices = availableIndices.length === MODE_C_FALLBACK_POOL.length
-    ? [pickedIndex]
-    : [...usedIndices, pickedIndex];
-
-  return {
-    fallbackData: MODE_C_FALLBACK_POOL[pickedIndex],
-    newUsedIndices: newUsedIndices
-  };
-}
+// ============================================================
+// 题库抽取与生成逻辑：Mode A (百科冷知识)
+// ============================================================
 
 function getNextFallbackQuestionA() {
   // 增加 ?. 可选链，确保在组件初始挂载且 gameState 未定义时不会抛出阻塞型异常
@@ -285,6 +316,36 @@ function getNextFallbackQuestionA() {
     fallbackData: MODE_A_FALLBACK_POOL[pickedIndex],
     newUsedIndices: newUsedIndices
   };
+}
+
+async function applyModeAFallback(roundId, participantIds) {
+  try {
+    const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 15) * 1000;
+
+    await update(roomRootRef(), {
+      "gameState/usedModeAIndices": newUsedIndices,
+      "gameState/round": {
+        ...localState.gameState?.round,
+        id: roundId,
+        subMode: "A",
+        stage: "a_answer",
+        participantIds,
+        question: fallbackData.question,
+        options: fallbackData.options,
+        correct: fallbackData.correct,
+        decode: fallbackData.decode,
+        startedAt,
+        endsAt,
+        autoNextAt: null,
+        revealedAt: null,
+        results: null
+      }
+    });
+  } catch (error) {
+    console.error("错误位置: [applyModeAFallback], 原因:", error);
+  }
 }
 
 async function generateModeAQuestion(roundId, participantIds) {
@@ -343,38 +404,70 @@ Language: 简体中文；不要提及与节目/剧情相关内容。
   }
 }
 
-async function applyModeAFallback(roundId, participantIds) {
-  try {
-    const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
-    const startedAt = nowMs();
-    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 15) * 1000;
+// ============================================================
+// 题库抽取与生成逻辑：Mode B (真心话雷达)
+// ============================================================
 
-    await update(roomRootRef(), {
-      "gameState/usedModeAIndices": newUsedIndices,
-      "gameState/round": {
-        ...localState.gameState?.round,
-        id: roundId,
-        subMode: "A",
-        stage: "a_answer",
-        participantIds,
-        question: fallbackData.question,
-        options: fallbackData.options,
-        correct: fallbackData.correct,
-        decode: fallbackData.decode,
-        startedAt,
-        endsAt,
-        autoNextAt: null,
-        revealedAt: null,
-        results: null
-      }
-    });
-  } catch (error) {
-    console.error("错误位置: [applyModeAFallback], 原因:", error);
+function getNextFallbackQuestionB() {
+  const usedIndices = localState.gameState?.usedModeBIndices || [];
+  let availableIndices = [];
+
+  for (let i = 0; i < MODE_B_FALLBACK_POOL.length; i++) {
+    if (!usedIndices.includes(i)) availableIndices.push(i);
   }
+
+  // 兜底机制：如果所有题目都被使用过，则清空记忆，重新开启新一轮循环
+  if (availableIndices.length === 0) {
+    availableIndices = MODE_B_FALLBACK_POOL.map((_, i) => i);
+  }
+
+  const pickedIndex = pickRandom(availableIndices);
+  
+  const newUsedIndices = availableIndices.length === MODE_B_FALLBACK_POOL.length
+    ? [pickedIndex]
+    : [...usedIndices, pickedIndex];
+
+  return {
+    fallbackData: MODE_B_FALLBACK_POOL[pickedIndex],
+    newUsedIndices: newUsedIndices
+  };
 }
 
-const SYSTEM_PROMPT = `Role: Fun party host. Target: Close friends (female/queer). Constraints: NO romance, men, sex, or gross topics. Output strictly valid JSON. Language: Simplified Chinese.`;
+// （此处应当承接完整的 applyModeBFallback 和 generateModeBQuestion 函数）
 
+
+// ============================================================
+// 题库抽取与生成逻辑：Mode C (卧室大冒险)
+// ============================================================
+
+function getNextFallbackMissionC() {
+  const usedIndices = localState.gameState?.usedModeCIndices || [];
+  let availableIndices = [];
+
+  for (let i = 0; i < MODE_C_FALLBACK_POOL.length; i++) {
+    if (!usedIndices.includes(i)) availableIndices.push(i);
+  }
+
+  // 如果所有题目都出过了，则清空记忆，重新开始新一轮循环
+  if (availableIndices.length === 0) {
+    availableIndices = MODE_C_FALLBACK_POOL.map((_, i) => i);
+  }
+
+  const pickedIndex = pickRandom(availableIndices);
+  
+  const newUsedIndices = availableIndices.length === MODE_C_FALLBACK_POOL.length
+    ? [pickedIndex]
+    : [...usedIndices, pickedIndex];
+
+  return {
+    fallbackData: MODE_C_FALLBACK_POOL[pickedIndex],
+    newUsedIndices: newUsedIndices
+  };
+}
+
+// （此处应当承接完整的 applyModeCFallback 和 generateModeCQuestion 函数）
+
+const SYSTEM_PROMPT = `Role: Fun party host. Target: Close friends (female/queer). Constraints: NO romance, men, sex, or gross topics. Output strictly valid JSON. Language: Simplified Chinese.`;
 const localState = { status: "lobby", players: {}, gameState: {}, submissions: {} };
 const myPlayerId = getOrCreateMyPlayerId();
 
