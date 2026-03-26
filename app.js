@@ -184,6 +184,84 @@ const MODE_A_FALLBACK_POOL = [
   { question: "走在干燥的冬天里，你用手去拉金属门把手，瞬间被“啪”地电了一下，疼得猛缩手。这个微小的静电火花，瞬间的电压大约有多高？", options: { A: "不到5伏特", B: "大约220伏特，和家用电一样", C: "起码在3000伏特到上万伏特之间", D: "几百万伏特" }, correct: "C", decode: "在干燥环境中，衣服摩擦在人体表面积累的静电荷无处释放。当你靠近良导体（金属）时，强大的局部电场会直接击穿空气间隙引发火花放电。要击穿1毫米的干燥空气，电势差通常需要达到3000伏特以上。虽然电压高得惊人，但由于放电时间极短（纳秒级）且总电荷量极小，因此它产生的瞬时电流极其微弱，不足以对人体造成实质性病理伤害（静电学理论与空气介电击穿物理机制）。" }
 ];
 
+
+const MODE_C_FALLBACK_POOL = [
+  { mission: "找一个枕头，深情地给它读一段你手机里最近的外卖订单，并且要读出莎士比亚戏剧的悲凉感。" },
+  { mission: "把一个水杯顶在头上保持平衡，同时缓慢地蹲下再站起来，期间不能笑出声。" },
+  { mission: "用毛巾或外套把自己裹成一个木乃伊，然后在地上或床上缓慢蠕动一米。" },
+  { mission: "找到房间里最丑的一件物品，像电视购物推销员一样，用极具感染力的语气向大家推销它 20 秒。" },
+  { mission: "拿一只干净的袜子套在手上，用它演一段“袜子木偶因为找不到另一只袜子而精神崩溃”的独角戏。" },
+  { mission: "找一本书或杂志，随便翻开一页，用新闻联播播音员那种字正腔圆的语调，朗读上面的一段话。" },
+  { mission: "找一根手机数据线当作套马索，表演一段“西部牛仔试图套住一头隐形疯牛”的激烈默剧。" },
+  { mission: "把被子披在身上当披风，站在床上（注意安全），高傲地发表一段“我即将统治这个房间”的登基演讲。" },
+  { mission: "找两支笔当筷子，试着夹起一件小物品（比如纸团），然后以极其优雅的姿态假装吃掉它。" },
+  { mission: "选在场的一位玩家，用房间里的三件不同物品（如抱枕、遥控器、纸巾盒）为她“加冕”，并授予她一个极其荒谬的头衔。" },
+  { mission: "假装自己是一个网络很差正在缓冲的视频，做一个动作突然卡住不动 10 秒，接着再以 1.5 倍速快进把动作做完。" },
+  { mission: "模仿一只非常高傲但突然脚滑摔倒的猫，要精准演出那种“假装什么都没发生，立刻舔毛掩饰”的尴尬感。" },
+  { mission: "假装你的两只手是两个正在激烈吵架的邻居，用一种谁也听不懂的自创语言大声争吵 15 秒。" },
+  { mission: "选一个角落面壁思过 10 秒，期间要用悲愤的语气自言自语：‘为什么我连个荷包蛋都煎不好……’" },
+  { mission: "假装你刚中了五千万彩票，但为了不让邻居发现，只能用极其压抑、完全无声的疯狂动作来庆祝。" },
+  { mission: "走到门口，对着门把手深深地鞠一躬，并用极其恭敬的语气说：‘感谢您一直以来为这个家把关。’" },
+  { mission: "假装你是一个刚附身在人类身上、还不会用四肢的外星人，极其艰难地从房间这头走到那头。" },
+  { mission: "躺在平坦的地方，假装自己是一条正在平底锅里被猛火煎的培根，表演从生到熟、渐渐痛苦卷曲的过程。" },
+  { mission: "做一个极其夸张的伸懒腰动作，并且要配合自己发出那种“老旧木门轴生锈被推开”的嘎吱嘎吱声。" },
+  { mission: "假装你面前有一面看不见的玻璃墙，表演一段“被困在玻璃箱里出不去”的经典哑剧，越绝望越好。" },
+  { mission: "打开手机前置摄像头，对着镜头连续做 5 种完全不同的毁容级鬼脸，并让大家截图留念。" },
+  { mission: "随机点开相册里的第 15 张照片，用《走近科学》那种充满悬疑感的旁白，给这照片强行编一个惊悚故事。" },
+  { mission: "用 Siri 或其他语音助手，故意用极其奇怪的口音问它三个无厘头的问题，比如‘企鹅为什么不穿裤子’。" },
+  { mission: "打开手机的手电筒，从下巴往上照自己的脸，用低沉的声音给大家讲一个毫无逻辑的搞笑“鬼故事”。" },
+  { mission: "闭上眼睛，在手机屏幕上盲打出‘今天是个好日子心想的事儿都能成’，打完立刻展示给大家看错成了什么鬼样子。" },
+  { mission: "给自己定一个 10 秒后的闹钟，闹钟一响，立刻假装自己是被唤醒的特工，立刻在房间里寻找掩体躲起来。" },
+  { mission: "把手机平放在地上，假装它是一个极其神圣的祭坛，围绕着它跳一段神秘的“祈雨舞”。" },
+  { mission: "打开手机倒计时 15 秒，在这 15 秒内，你必须尽可能多地触碰房间里所有蓝色的东西。" },
+  { mission: "假装你的手机是一个对讲机，用极其紧张的语气呼叫：‘呼叫总部，目标已经吃完了最后一块薯片，请指示！’" },
+  { mission: "走到窗边（或假装有窗户），用深沉沧桑的目光凝视远方 10 秒，叹气说：‘看来，奥特曼今天又不会来了。’" },
+  { mission: "把一只鞋顶在头上，假装这是一顶高贵的皇冠，走一段标准的模特步，然后用手优雅地飞吻。" },
+  { mission: "假装你是一个正在接受采访的国际巨星，但你只能用‘喵喵喵’来回答大家提出的问题。" },
+  { mission: "对着房间里最大的一件家具（比如床或衣柜），深情地唱两句《好汉歌》或者其他极其气势磅礴的歌曲。" },
+  { mission: "假装你突然忘记了怎么走路，只能像丧尸一样拖着腿缓慢移动到指定位置。" },
+  { mission: "找一个衣架，把它当成一把极其名贵的小提琴，闭上眼睛，极其陶醉地“拉”一段无声的交响乐。" },
+  { mission: "用慢动作演示你是如何吃掉一个隐形的巨大汉堡的，要注意展现出酱汁滴落和被噎到的细节。" },
+  { mission: "假装你是一棵刚刚长出来的蘑菇，蹲在地上，缓慢且费力地“顶开”泥土站起来，然后撑开你的伞盖。" },
+  { mission: "用你的额头去触碰房间里三个不同的平面（如墙壁、桌面、门），并且每次触碰都要大喊‘滴，打卡成功’。" },
+  { mission: "假装你现在置身于一个没有重力的太空舱，表演一下你是如何在失重状态下艰难地喝水的。" },
+  { mission: "找一个抱枕，把它当作一个重达 100 斤的杠铃，表演一次极其艰难、青筋暴起的硬拉动作。" },
+  { mission: "假装你是一个导游，用 20 秒的时间，向大家极其自豪地介绍这个房间里最不起眼的一个角落（比如墙角的一道裂缝）。" },
+  { mission: "把两只手放在耳朵两边当雷达，在房间里缓慢旋转扫描，突然定格指向某个人，大喊：‘检测到高浓度可爱电波！’" },
+  { mission: "假装你正在走红毯，四周都是聚光灯，连续摆出三个极度做作、极度自信的时尚杂志封面 Pose。" },
+  { mission: "用屁股在空中写出你名字的拼音首字母。" },
+  { mission: "假装你刚刚喝下了一瓶魔法药水，身体正在发生可怕的变异，用 15 秒的时间表演出你变成了一只大猩猩的过程。" },
+  { mission: "走到一面镜子（或反光物体）前，对着里面的自己，用极其油腻的霸总语气说：‘你这个磨人的小妖精，这片鱼塘被你承包了。’" },
+  { mission: "假装你的两条腿突然有了自己的想法，开始互相攻击绊倒对方，你在极力控制它们却惨遭失败。" },
+  { mission: "把一条毯子或外套盖在头上，假装自己是一个古老的神谕者，用沙哑的声音对在场的一人预言一句废话：‘明天，太阳会再次升起。’" },
+  { mission: "表演一段极其夸张的假哭，眼泪掉不下来没关系，但抽泣的动作和悲伤的肢体语言必须做到奥斯卡影后级别。" }
+];
+
+function getNextFallbackMissionC() {
+  const usedIndices = localState.gameState?.usedModeCIndices || [];
+  let availableIndices = [];
+
+  for (let i = 0; i < MODE_C_FALLBACK_POOL.length; i++) {
+    if (!usedIndices.includes(i)) availableIndices.push(i);
+  }
+
+  // 如果所有题目都出过了，则清空记忆，重新开始新一轮循环
+  if (availableIndices.length === 0) {
+    availableIndices = MODE_C_FALLBACK_POOL.map((_, i) => i);
+  }
+
+  const pickedIndex = pickRandom(availableIndices);
+  
+  const newUsedIndices = availableIndices.length === MODE_C_FALLBACK_POOL.length
+    ? [pickedIndex]
+    : [...usedIndices, pickedIndex];
+
+  return {
+    fallbackData: MODE_C_FALLBACK_POOL[pickedIndex],
+    newUsedIndices: newUsedIndices
+  };
+}
+
 function getNextFallbackQuestionA() {
   // 增加 ?. 可选链，确保在组件初始挂载且 gameState 未定义时不会抛出阻塞型异常
   const usedIndices = localState.gameState?.usedModeAIndices || [];
@@ -1313,17 +1391,44 @@ async function generateModeCQuestion(roundId, participantIds) {
   if (!ensureGeminiModel()) return applyModeCFallback(roundId, participantIds);
   try {
     const targetPlayerId = pickRandom(participantIds);
-    const fallback = { mission: "（备用）用一张便利贴写一句“我今天要乖一点”，贴在桌角 10 秒，然后假装自己很认真。" };
+    // 获取下一道未使用的题目以及更新后的索引列表
+    const { fallbackData, newUsedIndices } = getNextFallbackMissionC();
+    
     const prompt = `为 Mode C 生成一个适合在卧室/客厅用常见物品完成的搞笑小任务。只输出严格有效 JSON：{"mission":"..."}。
 mission 简体中文，避免恋爱、男士、性或露骨内容。`;
     const result = await geminiModel.generateContent(prompt);
     const rawText = result?.response ? result.response.text() : "";
     const parsed = parseJsonSafely(rawText);
-    const mission = parsed?.mission || fallback.mission;
+    
+    const isAIValid = !!parsed?.mission;
+    const mission = isAIValid ? parsed.mission : fallbackData.mission;
 
     const startedAt = nowMs();
-    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.C || 30) * 1000;
-    await update(roomRootRef(), { "gameState/round": { ...localState.gameState.round, id: roundId, subMode: "C", stage: "c_mission", participantIds, targetPlayerId, mission, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.C || 60) * 1000;
+    
+    const patchData = {
+      "gameState/round": {
+        ...localState.gameState?.round,
+        id: roundId,
+        subMode: "C",
+        stage: "c_mission",
+        participantIds,
+        targetPlayerId,
+        mission,
+        startedAt,
+        endsAt,
+        autoNextAt: null,
+        revealedAt: null,
+        results: null
+      }
+    };
+
+    // 只有当 AI 生成失败，实际动用了备用题库时，才消耗该题的索引
+    if (!isAIValid) {
+      patchData["gameState/usedModeCIndices"] = newUsedIndices;
+    }
+
+    await update(roomRootRef(), patchData);
   } catch (error) {
     console.error("错误位置: [generateModeCQuestion], 原因:", error);
     await applyModeCFallback(roundId, participantIds);
@@ -1333,9 +1438,29 @@ mission 简体中文，避免恋爱、男士、性或露骨内容。`;
 async function applyModeCFallback(roundId, participantIds) {
   try {
     const targetPlayerId = pickRandom(participantIds);
+    // 直接获取未使用的备用题和新索引
+    const { fallbackData, newUsedIndices } = getNextFallbackMissionC();
+    
     const startedAt = nowMs();
-    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.C || 30) * 1000;
-    await update(roomRootRef(), { "gameState/round": { ...localState.gameState.round, id: roundId, subMode: "C", stage: "c_mission", participantIds, targetPlayerId, mission: "（备用）用一张便利贴写一句“我今天要乖一点”，贴在桌角 10 秒，然后假装自己很认真。", startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.C || 60) * 1000;
+    
+    await update(roomRootRef(), {
+      "gameState/usedModeCIndices": newUsedIndices, // 将更新后的已用索引写入数据库
+      "gameState/round": {
+        ...localState.gameState?.round,
+        id: roundId,
+        subMode: "C",
+        stage: "c_mission",
+        participantIds,
+        targetPlayerId,
+        mission: fallbackData?.mission || "（兜底备用）做一个极其夸张的伸懒腰动作",
+        startedAt,
+        endsAt,
+        autoNextAt: null,
+        revealedAt: null,
+        results: null
+      }
+    });
   } catch (error) {
     console.error("错误位置: [applyModeCFallback], 原因:", error);
   }
