@@ -1402,7 +1402,26 @@ function bindDomEvents() {
     console.error("错误位置: [bind modeC options], 原因:", error);
   }
 }
-
+async function initFirebase() {
+  try {
+    const config = getFirebaseConfig();
+    if (!config) {
+      console.error("找不到 Firebase 配置信息 (APP_CONFIG.firebase)");
+      return false;
+    }
+    
+    // 初始化 App
+    const app = initializeFirebaseApp(config);
+    // 给顶部的全局变量 db 赋值，这样后续所有游戏逻辑才能正常使用
+    db = getDatabase(app);
+    
+    console.log("Firebase 初始化成功");
+    return true;
+  } catch (error) {
+    console.error("错误位置: [initFirebase], 原因:", error);
+    return false;
+  }
+}
 async function main() {
   bindDom();
   bindDomEvents();
