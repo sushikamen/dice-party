@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <title>Bluey 小小游戏大厅</title>
+    <title>Bluey Drink Hall</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- 基础样式文件（严格保留） -->
     <link rel="stylesheet" href="./style.css" />
@@ -21,7 +21,7 @@
           </div>
         </div>
         <div class="hero-text">
-          <div class="hero-name">Bluey · 小小 AI 伙伴</div>
+          <div class="hero-name">Bluey · 让我考考你</div>
           <div class="hero-message">"Hooray! Let's play a game!"</div>
         </div>
       </header>
@@ -71,7 +71,7 @@
             <span class="mode-icon" aria-hidden="true">🎉</span>
             <span class="mode-text" style="align-items: center">
               <span class="mode-title" style="font-size: 18px">加入派对</span>
-              <span class="mode-subtitle" style="font-size: 13px">你已选择动物后才可开启</span>
+              <span class="mode-subtitle" style="font-size: 13px">选择动物后可开启</span>
             </span>
           </button>
           <p class="panel-tip" id="join-tip">选择一个动物后，按钮会自动变为可用。</p>
@@ -83,7 +83,7 @@
         <section class="panel panel-players" aria-label="已加入的玩家">
           <h2 class="panel-title">已加入的玩家</h2>
           <div class="animal-list" id="player-list"></div>
-          <p class="panel-tip" id="hall-tip">房主将为大家出题；点击模式后会询问确认。</p>
+          <p class="panel-tip" id="hall-tip">Bluey将为大家出题；点击模式后会询问确认。</p>
         </section>
 
         <section class="panel panel-modes" aria-label="选择游戏模式">
@@ -93,7 +93,7 @@
               <span class="mode-icon" aria-hidden="true">🧠</span>
               <span class="mode-text">
                 <span class="mode-title">智商滑铁卢</span>
-                <span class="mode-subtitle">有趣的冷知识挑战</span>
+                <span class="mode-subtitle">知识挑战</span>
               </span>
             </button>
             <button class="mode-btn" type="button" data-mode="B" aria-label="真心话雷达：谁在撒谎？">
@@ -103,17 +103,17 @@
                 <span class="mode-subtitle">谁在撒谎？</span>
               </span>
             </button>
-            <button class="mode-btn" type="button" data-mode="C" aria-label="卧室大冒险：温馨懒散的小挑战">
+            <button class="mode-btn" type="button" data-mode="C" aria-label="卧室大冒险：懒散的小挑战">
               <span class="mode-icon" aria-hidden="true">🏠</span>
               <span class="mode-text">
                 <span class="mode-title">卧室大冒险</span>
-                <span class="mode-subtitle">温馨懒散的小挑战</span>
+                <span class="mode-subtitle">懒散的小挑战</span>
               </span>
             </button>
-            <button class="mode-btn" type="button" data-mode="D" aria-label="戏精上身：AI 评选最传神的表演">
+            <button class="mode-btn" type="button" data-mode="D" aria-label="我都要玩：决一死战">
               <span class="mode-icon" aria-hidden="true">⭐</span>
               <span class="mode-text">
-                <span class="mode-title">戏精上身</span>
+                <span class="mode-title">我都要玩</span>
                 <span class="mode-subtitle">Shuffle：A/B/C 随机出题</span>
               </span>
             </button>
@@ -204,8 +204,8 @@
           <span class="modal-mode-icon" aria-hidden="true">🧠</span>
           智商滑铁卢
         </h2>
-        <p class="modal-subtitle">有趣的冷知识挑战</p>
-        <p class="modal-question" id="modal-mode-a-question">正在生成百科小冷知识题目……</p>
+        <p class="modal-subtitle">有趣的知识挑战</p>
+        <p class="modal-question" id="modal-mode-a-question">正在生成百科知识题目……</p>
 
         <div class="modal-feedback" id="modal-mode-a-feedback" aria-live="polite" style="display: none"></div>
         <div class="modal-waiting" id="modal-mode-a-waiting" style="display: none">
