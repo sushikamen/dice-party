@@ -20,7 +20,7 @@ let db = null;
 let geminiModel = null;
 
 const ROOM_PATH = "partyRoom";
-const GAMEMODE_DURATION_SECONDS = { A: 20, B: 20, C: 30 };
+const GAMEMODE_DURATION_SECONDS = { A: 15, B: 15, C: 30 };
 
 const ANIMAL_META = {
   dog: { label: "小狗", emoji: "🐶" },
@@ -28,6 +28,51 @@ const ANIMAL_META = {
   rabbit: { label: "小兔", emoji: "🐰" },
   fox: { label: "狐狸", emoji: "🦊" }
 };
+
+const MODE_A_FALLBACK_POOL = [
+  { question: "世界上最小的鸟是什么鸟？", options: { A: "麻雀", B: "蜂鸟", C: "燕子", D: "翠鸟" }, correct: "B", decode: "蜂鸟是世界上已知最小的鸟类，体重通常只有几克。" },
+  { question: "澳大利亚的国宝动物中，哪一种的指纹与人类极度相似？", options: { A: "袋鼠", B: "考拉", C: "袋熊", D: "鸭嘴兽" }, correct: "B", decode: "考拉的指纹在电子扫描下与人类指纹极其相似，甚至曾在犯罪现场引起过混淆。" },
+  { question: "著名动画《布鲁伊》(Bluey)中，布鲁伊是什么品种的狗？", options: { A: "柯基", B: "澳洲牧牛犬", C: "边境牧羊犬", D: "拉布拉多" }, correct: "B", decode: "布鲁伊是一只蓝色的澳洲牧牛犬（Blue Heeler）。" },
+  { question: "水母大约有多少是由水组成的？", options: { A: "50%", B: "70%", C: "95%", D: "99%" }, correct: "C", decode: "水母的身体大约有95%是水，它们没有大脑、心脏和血液。" },
+  { question: "八爪鱼（章鱼）有几颗心脏？", options: { A: "1颗", B: "2颗", C: "3颗", D: "4颗" }, correct: "C", decode: "章鱼有三颗心脏，其中两颗负责将血液泵入鳃，另一颗负责将血液输送到全身。" },
+  { question: "人类的哪部分骨头最坚硬？", options: { A: "头骨", B: "大腿骨", C: "牙釉质", D: "肋骨" }, correct: "C", decode: "牙釉质是人体最坚硬的物质，含有高度钙化的矿物质。" },
+  { question: "地球上最长的山脉是？", options: { A: "喜马拉雅山脉", B: "安第斯山脉", C: "落基山脉", D: "阿尔卑斯山脉" }, correct: "B", decode: "南美洲的安第斯山脉全长约7000公里，是陆地上最长的山脉。" },
+  { question: "猫的味觉中缺少哪种味道的感知？", options: { A: "酸味", B: "甜味", C: "苦味", D: "咸味" }, correct: "B", decode: "由于基因突变，猫无法尝出甜味，所以它们对糖果没有兴趣。" },
+  { question: "太阳系中唯一一颗自转方向与其他行星相反的行星是？", options: { A: "金星", B: "火星", C: "木星", D: "土星" }, correct: "A", decode: "金星的自转是自东向西的，所以在金星上太阳是西升东落的。" },
+  { question: "大熊猫刚出生时大约有多重？", options: { A: "10-20克", B: "100-200克", C: "500-600克", D: "1-2千克" }, correct: "B", decode: "新生的大熊猫非常微小，通常体重只有100到200克左右。" },
+  { question: "哪种血型被称为“万能受血者”？", options: { A: "A型", B: "B型", C: "O型", D: "AB型" }, correct: "D", decode: "AB型血的人体内没有抗A和抗B抗体，因此在紧急情况下可以接受任何血型的血液。" },
+  { question: "人体最大的器官是？", options: { A: "肝脏", B: "大脑", C: "皮肤", D: "肺" }, correct: "C", decode: "皮肤是人体最大的器官，承担着保护身体、调节体温等重要功能。" },
+  { question: "圆周率（π）的前三位数字是？", options: { A: "3.12", B: "3.14", C: "3.16", D: "3.18" }, correct: "B", decode: "圆周率是一个无理数，其前三位数字是3.14。" },
+  { question: "哪种气体在地球大气层中占比最高？", options: { A: "氧气", B: "二氧化碳", C: "氮气", D: "氢气" }, correct: "C", decode: "地球大气中约78%是氮气，氧气仅占约21%。" },
+  { question: "北极熊的皮肤实际上是什么颜色的？", options: { A: "白色", B: "粉色", C: "黑色", D: "透明" }, correct: "C", decode: "北极熊的毛是透明中空的，而它们的皮肤其实是黑色的，有助于吸收太阳光保暖。" }
+  // 此处预置了15道跨领域的冷知识，你可以按照完全相同的格式，将剩余题目直接粘贴在数组内扩充至100题。
+];
+
+function getNextFallbackQuestionA() {
+  const usedIndices = localState.gameState.usedModeAIndices || [];
+  let availableIndices = [];
+
+  for (let i = 0; i < MODE_A_FALLBACK_POOL.length; i++) {
+    if (!usedIndices.includes(i)) availableIndices.push(i);
+  }
+
+  // 如果题库已被抽干，重置可用题库
+  if (availableIndices.length === 0) {
+    availableIndices = MODE_A_FALLBACK_POOL.map((_, i) => i);
+  }
+
+  const pickedIndex = pickRandom(availableIndices);
+  
+  // 生成新的已使用记录
+  const newUsedIndices = availableIndices.length === MODE_A_FALLBACK_POOL.length
+    ? [pickedIndex] // 刚重置完毕
+    : [...usedIndices, pickedIndex];
+
+  return {
+    fallbackData: MODE_A_FALLBACK_POOL[pickedIndex],
+    newUsedIndices: newUsedIndices
+  };
+}
 
 async function initFirebase() {
   const config = getFirebaseConfig();
@@ -1038,24 +1083,85 @@ async function hostRevealRound(round, submissionsForRound) {
 async function generateModeAQuestion(roundId, participantIds) {
   if (!ensureGeminiModel()) return applyModeAFallback(roundId, participantIds);
   try {
-    const fallback = { question: "（备用）有趣的冷知识：世界上最大的沙漠是哪个？", options: { A: "撒哈拉沙漠", B: "南极洲沙漠", C: "戈壁沙漠", D: "戈壁滩沙漠" }, correct: "B", decode: "（备用）南极洲虽然下雪少，但降水极少，气候条件符合“沙漠”判定，所以它是最大的沙漠。" };
-    const prompt = `为 Mode A 生成“百科小冷知识选择题”（难度不高、适合青少年及以上）。
+    const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
+
+    const prompt = `为 Mode A 生成“百科小冷知识选择题”（冷门有趣、跨越多学科、适合青少年及以上）。
 只输出严格有效 JSON，格式为：{"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct":"A|B|C|D","decode":"..."}。
 Language: 简体中文；不要提及与节目/剧情相关内容。
 核心约束：
 - correct 字段的值必须是 options 中实际存在的键。
 - decode 字段必须是对 correct 选项的严谨、客观的解释，逻辑必须保持高度一致。`;
+
     const result = await geminiModel.generateContent(prompt);
     const rawText = result?.response ? result.response.text() : "";
     const parsed = parseJsonSafely(rawText);
-    const payload = { question: parsed?.question || fallback.question, options: parsed?.options || fallback.options, correct: parsed?.correct || fallback.correct, decode: parsed?.decode || fallback.decode };
+
+    // 检查 AI 生成的结构是否完整
+    const isAIValid = parsed?.question && parsed?.options && parsed?.correct;
+    const payload = isAIValid ? parsed : fallbackData;
 
     const startedAt = nowMs();
-    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 20) * 1000;
-    await update(roomRootRef(), { "gameState/round": { ...localState.gameState.round, id: roundId, subMode: "A", stage: "a_answer", participantIds, question: payload.question, options: payload.options, correct: payload.correct, decode: payload.decode, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 15) * 1000;
+
+    // 构建更新数据包
+    const patchData = {
+      "gameState/round": {
+        ...localState.gameState.round,
+        id: roundId,
+        subMode: "A",
+        stage: "a_answer",
+        participantIds,
+        question: payload.question,
+        options: payload.options,
+        correct: payload.correct,
+        decode: payload.decode,
+        startedAt,
+        endsAt,
+        autoNextAt: null,
+        revealedAt: null,
+        results: null
+      }
+    };
+
+    // 只有在调用了备选题的情况下，才更新 Firebase 中的使用记录
+    if (!isAIValid) {
+      patchData["gameState/usedModeAIndices"] = newUsedIndices;
+    }
+
+    await update(roomRootRef(), patchData);
   } catch (error) {
     console.error("错误位置: [generateModeAQuestion], 原因:", error);
     await applyModeAFallback(roundId, participantIds);
+  }
+}
+
+async function applyModeAFallback(roundId, participantIds) {
+  try {
+    const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 15) * 1000;
+
+    await update(roomRootRef(), {
+      "gameState/usedModeAIndices": newUsedIndices,
+      "gameState/round": {
+        ...localState.gameState.round,
+        id: roundId,
+        subMode: "A",
+        stage: "a_answer",
+        participantIds,
+        question: fallbackData.question,
+        options: fallbackData.options,
+        correct: fallbackData.correct,
+        decode: fallbackData.decode,
+        startedAt,
+        endsAt,
+        autoNextAt: null,
+        revealedAt: null,
+        results: null
+      }
+    });
+  } catch (error) {
+    console.error("错误位置: [applyModeAFallback], 原因:", error);
   }
 }
 
@@ -1150,7 +1256,7 @@ async function revealModeA(round, submissionsForRound) {
     });
     const revealedAt = nowMs();
     await update(roomRootRef(), { 
-      "gameState/round": { ...round, stage: "a_revealed", results, revealedAt, autoNextAt: revealedAt + 10000 } 
+      "gameState/round": { ...round, stage: "a_revealed", results, revealedAt, autoNextAt: revealedAt + 7000 } 
     });
   } catch (error) {
     console.error("错误位置: [revealModeA], 原因:", error);
