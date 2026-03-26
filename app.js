@@ -698,13 +698,13 @@ async function joinParty() {
 
 async function gameLoopTick() {
   if (!db || localState.status !== "playing") return;
+
   const round = localState.gameState?.round;
   if (!round) return;
 
   try {
     const pause = localState.gameState.pause || {};
-    
-    // 处理暂停恢复逻辑
+
     if (pause.active) {
       if (pause.resumeRequested && !pause.resumedByHost) {
         if (await claimLock("resume_pause", 5000)) {
@@ -722,32 +722,62 @@ async function gameLoopTick() {
           });
         }
       }
-      return; 
+      return;
     }
 
-    // 初始阶段：竞争生成题目
+    // ===== 核心修复：抢到锁后，绝对不要手动释放锁！让它自然过期，防止别的客户端重复触发 =====
     if (round.stage === "init") {
-      if (await claimLock(`generate_${round.id}`, 30000)) {
-        console.log(`[执行权确认] 客户端 ${myPlayerId} 负责生成本轮内容...`);
-        return hostGenerateQuestionForRound(round);
+      if (await claimLock(`generate_${round.id}`, 15000)) {
+        return await hostGenerateQuestionForRound(round);
       }
     }
 
-    // 揭晓阶段：竞争结算结果
     if (shouldRevealByTime(round)) {
-      if (await claimLock(`reveal_${round.id}_${round.stage}`, 10000)) {
-        return hostRevealRound(round, getSubmissionsForRound());
+      if (await claimLock(`reveal_${round.id}_${round.stage}`, 8000)) {
+        return await hostRevealRound(round, getSubmissionsForRound());
       }
     }
 
-    // 推进阶段：竞争开启下一局
     if (isAutoNextDue(round)) {
-      if (await claimLock(`next_round_${round.id}`, 10000)) {
-        return hostGenerateNextRoundAndQuestion(round);
+      if (await claimLock(`next_${round.id}`, 8000)) {
+        return await hostGenerateNextRoundAndQuestion(round);
       }
     }
   } catch (error) {
     console.error("状态机轮询异常:", error);
+  }
+}
+
+// 初始化游戏状态引擎
+async function requestStartParty(selectedMode) {
+  if (!selectedMode || !db) return;
+  
+  try {
+    const participantIds = Object.keys(localState.players || {});
+    if (!participantIds.length) return;
+
+    const roundId = makeRoundId();
+    const subMode = selectedMode === "D" ? pickRandom(["A", "B", "C"]) : selectedMode;
+
+    await update(roomRootRef(), {
+      status: "playing",
+      submissions: null, // 🚨 核心修复：绝对不能用 {}，必须用 null 清空
+      locks: null,       // 顺手清空卡死的旧锁
+      gameState: {
+        mode: selectedMode,
+        pause: { active: false },
+        round: {
+          id: roundId,
+          subMode: subMode,
+          stage: "init",
+          participantIds: participantIds,
+          question: null, options: null, correct: null, decode: null, mission: null,
+          targetPlayerId: null, targetChoice: null, results: null, endsAt: null, autoNextAt: null
+        }
+      }
+    });
+  } catch (error) {
+    console.error("引擎初始化失败:", error);
   }
 }
 // 初始化游戏状态引擎（支持任意玩家发起强行重置）
