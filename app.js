@@ -399,11 +399,11 @@ function renderModeA(round) {
     dom.modeAWaiting.style.display = "none";
     dom.modeAOptions.style.display = "none";
     dom.modeADecode.textContent = round.decode || "";
-    dom.modeAQuestion.textContent = round.question || "等待房主生成题目……";
+    dom.modeAQuestion.textContent = round.question || "等待Bluey生成题目……";
 
     if (!stage || stage === "init") {
       dom.modeAWaiting.style.display = "block";
-      dom.modeAWaiting.textContent = "等待房主生成题目……";
+      dom.modeAWaiting.textContent = "等待Bluey生成题目……";
       return renderCountdown(round);
     }
 
@@ -480,7 +480,7 @@ function renderModeB(round) {
     dom.modeBOptions.style.display = "none";
     if (!stage || stage === "init") {
       dom.modeBWaiting.style.display = "block";
-      dom.modeBWaiting.textContent = "等待房主生成吐槽问题……";
+      dom.modeBWaiting.textContent = "等待Bluey生成吐槽问题……";
       return renderCountdown(round);
     }
     if (stage === "b_target_choice") {
@@ -568,7 +568,7 @@ function renderModeC(round) {
     if (!stage || stage === "init") {
       dom.modeCMission.textContent = "卧室大冒险";
       dom.modeCWaiting.style.display = "block";
-      dom.modeCWaiting.textContent = "等待房主生成任务……";
+      dom.modeCWaiting.textContent = "等待Bluey生成任务……";
       return renderCountdown(round);
     }
     if (stage === "c_mission") {
@@ -981,7 +981,7 @@ async function submitModeC_done() {
 }
 
 // ============================================================
-// 主控推进（房主）: init -> reveal -> autoNext
+// 主控推进（Bluey）: init -> reveal -> autoNext
 // ============================================================
 function shouldRevealByTime(round) {
   if (!round.endsAt || typeof round.endsAt !== "number") return false;
