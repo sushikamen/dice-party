@@ -63,8 +63,6 @@ function getOrCreateMyPlayerId() {
   }
 }
 
-let db = null;
-let geminiModel = null;
 
 function getFirebaseConfig() {
   try {
