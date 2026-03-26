@@ -1134,11 +1134,14 @@ async function revealModeA(round, submissionsForRound) {
     participantIds.forEach((playerId) => {
       const sub = submissionsForRound[playerId] || {};
       const optionKey = sub.optionKey || null;
-      const isCorrect = optionKey ? optionKey === round.correct : null;
+      // 🚨 只有当 optionKey 存在且等于正确答案时才是 true，其他情况全是 false
+      const isCorrect = (optionKey && round.correct) ? (optionKey === round.correct) : false;
       results[playerId] = { optionKey, isCorrect };
     });
     const revealedAt = nowMs();
-    await update(roomRootRef(), { "gameState/round": { ...round, stage: "a_revealed", results, revealedAt, autoNextAt: revealedAt + 10000 } });
+    await update(roomRootRef(), { 
+      "gameState/round": { ...round, stage: "a_revealed", results, revealedAt, autoNextAt: revealedAt + 10000 } 
+    });
   } catch (error) {
     console.error("错误位置: [revealModeA], 原因:", error);
   }
