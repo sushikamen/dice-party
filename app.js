@@ -1039,7 +1039,11 @@ async function generateModeAQuestion(roundId, participantIds) {
   try {
     const fallback = { question: "（备用）有趣的冷知识：世界上最大的沙漠是哪个？", options: { A: "撒哈拉沙漠", B: "南极洲沙漠", C: "戈壁沙漠", D: "戈壁滩沙漠" }, correct: "B", decode: "（备用）南极洲虽然下雪少，但降水极少，气候条件符合“沙漠”判定，所以它是最大的沙漠。" };
     const prompt = `为 Mode A 生成“百科小冷知识选择题”（难度不高、适合青少年及以上）。
-只输出严格有效 JSON，格式为：{"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct":"A|B|C|D","decode":"..."}。Language: 简体中文；不要提及与节目/剧情相关内容。`;
+只输出严格有效 JSON，格式为：{"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct":"A|B|C|D","decode":"..."}。
+Language: 简体中文；不要提及与节目/剧情相关内容。
+核心约束：
+- correct 字段的值必须是 options 中实际存在的键。
+- decode 字段必须是对 correct 选项的严谨、客观的解释，逻辑必须保持高度一致。`;
     const result = await geminiModel.generateContent(prompt);
     const rawText = result?.response ? result.response.text() : "";
     const parsed = parseJsonSafely(rawText);
