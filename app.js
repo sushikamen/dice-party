@@ -1,5 +1,3 @@
-console.log("app.js loaded (stub)");
-
 import { initializeApp as initializeFirebaseApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
 import {
   getDatabase,
@@ -13,6 +11,14 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 import { GoogleGenerativeAI } from "https://unpkg.com/@google/generative-ai/dist/index.mjs";
 
+console.log("app.js loaded");
+
+let currentSelectedAnimalKey = null;
+let pendingStartMode = null;
+let lastRenderedRoundKey = "";
+let db = null;
+let geminiModel = null;
+
 const ROOM_PATH = "partyRoom";
 const GAMEMODE_DURATION_SECONDS = { A: 20, B: 20, C: 30 };
 
@@ -22,6 +28,22 @@ const ANIMAL_META = {
   rabbit: { label: "小兔", emoji: "🐰" },
   fox: { label: "狐狸", emoji: "🦊" }
 };
+
+async function initFirebase() {
+  const config = getFirebaseConfig();
+  if (!config) {
+    console.error("Firebase config missing in window.APP_CONFIG");
+    return false;
+  }
+  try {
+    const app = initializeFirebaseApp(config);
+    db = getDatabase(app);
+    return true;
+  } catch (error) {
+    console.error("Firebase initialization failed:", error);
+    return false;
+  }
+}
 
 const SYSTEM_PROMPT = `Role: Fun party host. Target: Close friends (female/queer). Constraints: NO romance, men, sex, or gross topics. Output strictly valid JSON. Language: Simplified Chinese.`;
 
@@ -132,114 +154,18 @@ function pickRandom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
-function computeHostId(playersObj) {
-  try {
-    const entries = Object.entries(playersObj || {});
-    if (!entries.length) return null;
-    const sorted = entries
-      .map(([id, p]) => ({ id, p }))
-      .filter((x) => x.p && typeof x.p.joinedAt === "number")
-      .sort((a, b) => a.p.joinedAt - b.p.joinedAt);
-    return sorted.length ? sorted[0].id : entries[0][0];
-  } catch (error) {
-    console.error("错误位置: [计算房主], 原因:", error);
-    return null;
-  }
-}
 
 function isPauseActive() {
   return !!localState.gameState?.pause?.active;
 }
 
-function isHostNow() {
-  const calculatedHostId = computeHostId(localState.players);
-  const isMatch = !!(calculatedHostId && calculatedHostId === myPlayerId);
-  
-  // 仅在状态为 playing 时输出，避免干扰 lobby 阶段
-  if (localState.status === "playing") {
-    console.log(`[主机诊断] 计算出的房主: ${calculatedHostId} | 我的ID: ${myPlayerId} | 匹配: ${isMatch}`);
-  }
-  return isMatch;
-}
 
-// 在 hostLoopTick 开头增加状态监控
-async function hostLoopTick() {
-  if (!db) return;
-  if (localState.status !== "playing") return;
-
-  const round = localState.gameState?.round;
-  if (!round) {
-    console.warn("[逻辑警告] 游戏已开始但 gameState.round 为空");
-    return;
-  }
-
-  if (!isHostNow()) return;
-
-  // 如果通过了 isHostNow，说明你是当前逻辑的执行者
-  console.log(`[逻辑执行] 我是当前执行者，阶段: ${round.stage}`);
-  
-  try {
-    const pause = localState.gameState.pause || {};
-    // ... 原有逻辑
-  } catch (error) {
-    console.error("hostLoopTick 执行异常:", error);
-  }
-}
 function getSubmissionsForRound() {
   const roundId = localState.gameState?.round?.id;
   if (!roundId) return {};
   return localState.submissions?.[roundId] || {};
 }
 
-async function initFirebase() {
-  try {
-    const firebaseConfig = getFirebaseConfig();
-    if (!firebaseConfig) {
-      console.error("错误位置: [Firebase 初始化], 原因:", new Error("缺少 APP_CONFIG.firebase"));
-      return false;
-    }
-    const app = initializeFirebaseApp(firebaseConfig);
-    db = getDatabase(app);
-    return true;
-  } catch (error) {
-    console.error("错误位置: [Firebase 初始化], 原因:", error);
-    return false;
-  }
-}
-
-async function claimGenerationLock(token) {
-  try {
-    const result = await runTransaction(generationLockRef(), (current) => {
-      const c = current || {};
-      const now = Date.now();
-      const expired = typeof c.expiresAt !== "number" ? true : c.expiresAt < now;
-      if (c.locked && !expired) return current;
-      return { locked: true, requestToken: token, claimedBy: myPlayerId, claimedAt: now, expiresAt: now + 30000 };
-    });
-    const final = result?.snapshot?.val();
-    return !!(final && final.requestToken === token && final.claimedBy === myPlayerId);
-  } catch (error) {
-    console.error("错误位置: [claimGenerationLock], 原因:", error);
-    return false;
-  }
-}
-
-async function claimStartLock(token) {
-  try {
-    const result = await runTransaction(startLockRef(), (current) => {
-      const c = current || {};
-      const now = Date.now();
-      const expired = typeof c.expiresAt !== "number" ? true : c.expiresAt < now;
-      if (c.locked && !expired) return current;
-      return { locked: true, requestToken: token, claimedBy: myPlayerId, claimedAt: now, expiresAt: now + 15000 };
-    });
-    const final = result?.snapshot?.val();
-    return !!(final && final.requestToken === token && final.claimedBy === myPlayerId);
-  } catch (error) {
-    console.error("错误位置: [claimStartLock], 原因:", error);
-    return false;
-  }
-}
 
 const dom = {};
 function bindDom() {
@@ -325,10 +251,6 @@ function setViews({ lobbyVisible, hallVisible }) {
     console.error("错误位置: [setViews], 原因:", error);
   }
 }
-
-let currentSelectedAnimalKey = null;
-let pendingStartMode = null;
-let lastRenderedRoundKey = "";
 
 function refreshLobbyUI() {
   try {
@@ -776,54 +698,154 @@ async function joinParty() {
   }
 }
 
+async function gameLoopTick() {
+  if (!db || localState.status !== "playing") return;
+  const round = localState.gameState?.round;
+  if (!round) return;
+
+  try {
+    const pause = localState.gameState.pause || {};
+    
+    // 处理暂停恢复逻辑
+    if (pause.active) {
+      if (pause.resumeRequested && !pause.resumedByHost) {
+        if (await claimLock("resume_pause", 5000)) {
+          const delta = Date.now() - (pause.appliedAtMs || Date.now());
+          const patch = {};
+          if (pause.snapshot?.endsAt != null) patch["gameState.round.endsAt"] = pause.snapshot.endsAt + delta;
+          if (pause.snapshot?.autoNextAt != null) patch["gameState.round.autoNextAt"] = pause.snapshot.autoNextAt + delta;
+
+          await update(roomRootRef(), {
+            ...patch,
+            "gameState.pause.active": false,
+            "gameState.pause.resumeRequested": false,
+            "gameState.pause.appliedByHost": false,
+            "gameState.pause.resumedByHost": true
+          });
+        }
+      }
+      return; 
+    }
+
+    // 初始阶段：竞争生成题目
+    if (round.stage === "init") {
+      if (await claimLock(`generate_${round.id}`, 30000)) {
+        console.log(`[执行权确认] 客户端 ${myPlayerId} 负责生成本轮内容...`);
+        return hostGenerateQuestionForRound(round);
+      }
+    }
+
+    // 揭晓阶段：竞争结算结果
+    if (shouldRevealByTime(round)) {
+      if (await claimLock(`reveal_${round.id}_${round.stage}`, 10000)) {
+        return hostRevealRound(round, getSubmissionsForRound());
+      }
+    }
+
+    // 推进阶段：竞争开启下一局
+    if (isAutoNextDue(round)) {
+      if (await claimLock(`next_round_${round.id}`, 10000)) {
+        return hostGenerateNextRoundAndQuestion(round);
+      }
+    }
+  } catch (error) {
+    console.error("状态机轮询异常:", error);
+  }
+}
+// 初始化游戏状态引擎（支持任意玩家发起强行重置）
 async function requestStartParty(selectedMode) {
   if (!selectedMode || !db) return;
-  // 即使在暂停状态，我们也允许强制重新开始
   
   try {
     const participantIds = Object.keys(localState.players || {});
-    if (!participantIds.length) {
-      console.error("房间里没有人，无法开始游戏");
-      return;
-    }
+    if (!participantIds.length) return;
 
-    // --- 修改：谁点开始，谁就是这一局的房主，负责生成题目 ---
-    const hostId = myPlayerId; 
     const roundId = makeRoundId();
     const subMode = selectedMode === "D" ? pickRandom(["A", "B", "C"]) : selectedMode;
 
-    console.log("🚀 正在强制开启游戏，模式:", selectedMode);
-
-    // --- 修改：删除了所有 lock (锁定) 逻辑，直接更新数据库 ---
     await update(roomRootRef(), {
       status: "playing",
       submissions: {}, 
       gameState: {
         mode: selectedMode,
-        hostId: hostId,
         pause: { active: false },
         round: {
           id: roundId,
           subMode: subMode,
           stage: "init",
           participantIds: participantIds,
-          question: null,
-          options: null,
-          correct: null,
-          decode: null,
-          mission: null,
-          targetPlayerId: null,
-          targetChoice: null,
-          results: null,
-          endsAt: null,
-          autoNextAt: null
+          question: null, options: null, correct: null, decode: null, mission: null,
+          targetPlayerId: null, targetChoice: null, results: null, endsAt: null, autoNextAt: null
         }
       }
     });
-  } catch (error) { // <--- 确保有这行：捕捉错误
-    console.error("❌ 开启游戏失败:", error);
+  } catch (error) {
+    console.error("引擎初始化失败:", error);
   }
-} // <--- 确保有这行：结束整个函数
+}
+
+// 调度当前回合的生成模型
+async function hostGenerateQuestionForRound(round) {
+  const subMode = round.subMode;
+  const participantIds = Array.isArray(round.participantIds) && round.participantIds.length 
+    ? round.participantIds 
+    : Object.keys(localState.players || {});
+
+  try {
+    await clearSubmissions();
+    if (subMode === "A") return await generateModeAQuestion(round.id, participantIds);
+    if (subMode === "B") return await generateModeBQuestion(round.id, participantIds);
+    if (subMode === "C") return await generateModeCQuestion(round.id, participantIds);
+  } catch (error) {
+    console.error(`模型调度异常 [模式 ${subMode}]:`, error);
+  }
+}
+
+// 调度下一回合的生成模型
+async function hostGenerateNextRoundAndQuestion(round) {
+  const currentMode = localState.gameState.mode;
+  const participantIds = Array.isArray(round.participantIds) && round.participantIds.length ? round.participantIds : Object.keys(localState.players || {});
+  if (!participantIds.length) return;
+
+  const nextSubMode = currentMode === "D" ? pickRandom(["A", "B", "C"]) : currentMode;
+  const newRoundId = makeRoundId();
+
+  await clearSubmissions();
+  await update(roomRootRef(), { 
+    "gameState.round": { 
+      ...round, id: newRoundId, subMode: nextSubMode, stage: "init", 
+      question: null, options: null, correct: null, decode: null, mission: null, 
+      targetPlayerId: null, targetChoice: null, results: null, endsAt: null, autoNextAt: null, participantIds 
+    } 
+  });
+
+  if (nextSubMode === "A") return generateModeAQuestion(newRoundId, participantIds);
+  if (nextSubMode === "B") return generateModeBQuestion(newRoundId, participantIds);
+  if (nextSubMode === "C") return generateModeCQuestion(newRoundId, participantIds);
+}
+
+// 通用分布式抢锁机制
+async function claimLock(lockName, durationMs = 15000) {
+  if (!db) return false;
+  const lockRef = ref(db, `${ROOM_PATH}/locks/${lockName}`);
+  try {
+    const result = await runTransaction(lockRef, (current) => {
+      const now = Date.now();
+      // 验证当前锁状态：若存在且未过期，则放弃竞争
+      if (current && current.locked && current.expiresAt > now) {
+        return; 
+      }
+      // 写入当前客户端标识与锁过期时间
+      return { locked: true, claimedBy: myPlayerId, expiresAt: now + durationMs };
+    });
+    // 确认事务已提交且持有者为当前客户端
+    return result.committed && result.snapshot.val()?.claimedBy === myPlayerId;
+  } catch (error) {
+    console.error("并发锁竞争异常:", error);
+    return false;
+  }
+}
+
 // 替换原有的 requestPause 函数
 async function requestPause() {
   if (!db) return;
@@ -860,8 +882,7 @@ async function requestContinue() {
 async function requestReturnHall() {
   if (!db) return;
   try {
-    const hostId = computeHostId(localState.players);
-    if (hostId !== myPlayerId) return;
+    // 已经彻底去中心化，任何人都可以触发返回大厅，重置房间状态
     await update(roomRootRef(), {
       status: "hall",
       "gameState.mode": null,
@@ -945,27 +966,6 @@ function isAutoNextDue(round) {
   return String(round.stage || "").endsWith("_revealed");
 }
 
-async function hostLoopTick() {
-  if (!db) return;
-  if (localState.status !== "playing") return;
-  const round = localState.gameState?.round;
-  if (!round) return;
-  if (!isHostNow()) return;
-
-  try {
-    const pause = localState.gameState.pause || {};
-    if (pause.active) {
-      await hostHandlePause();
-      return;
-    }
-    if (round.stage === "init") return hostGenerateQuestionForRound(round);
-    if (shouldRevealByTime(round)) return hostRevealRound(round, getSubmissionsForRound());
-    if (isAutoNextDue(round)) return hostGenerateNextRoundAndQuestion(round);
-  } catch (error) {
-    console.error("错误位置: [hostLoopTick], 原因:", error);
-  }
-}
-
 async function hostHandlePause() {
   try {
     const pause = localState.gameState.pause || {};
@@ -1010,39 +1010,6 @@ async function clearSubmissions() {
   }
 }
 
-async function hostGenerateQuestionForRound(round) {
-  const subMode = round.subMode;
-  
-  // --- 修改 1：使用通用的竞争锁 ---
-  // 锁的标识符直接关联当前回合 ID。
-  // 只有第一个成功写入 partyRoom/locks/generate_{roundId} 的玩家会继续。
-  if (!(await claimActionLock("generate", round.id))) {
-    console.log(`[并发拦截] 回合 ${round.id} 的题目已有其他玩家在生成中。`);
-    return;
-  }
-
-  console.log(`[执行生成] 成功抢占生成权，正在调用 Gemini 生成模式 ${subMode} 的内容...`);
-
-  // --- 修改 2：确保参与者列表完整 ---
-  const participantIds = Array.isArray(round.participantIds) && round.participantIds.length 
-    ? round.participantIds 
-    : Object.keys(localState.players || {});
-
-  // --- 修改 3：前置清理工作 ---
-  try {
-    // 生成新题前，物理清空上一轮的提交记录
-    await clearSubmissions();
-    
-    // 分发生成逻辑
-    if (subMode === "A") return await generateModeAQuestion(round.id, participantIds);
-    if (subMode === "B") return await generateModeBQuestion(round.id, participantIds);
-    if (subMode === "C") return await generateModeCQuestion(round.id, participantIds);
-    
-  } catch (error) {
-    console.error(`[生成失败] 模式 ${subMode} 过程中出现异常:`, error);
-    // 可选：如果生成彻底失败，可以在这里移除锁，允许其他人重试
-  }
-}
 
 async function hostRevealRound(round, submissionsForRound) {
   const subMode = round.subMode;
@@ -1052,23 +1019,7 @@ async function hostRevealRound(round, submissionsForRound) {
   if (subMode === "C" && round.stage === "c_mission") return revealModeC(round, submissionsForRound);
 }
 
-async function hostGenerateNextRoundAndQuestion(round) {
-  const currentMode = localState.gameState.mode;
-  const participantIds = Array.isArray(round.participantIds) && round.participantIds.length ? round.participantIds : Object.keys(localState.players || {});
-  if (!participantIds.length) return;
 
-  const nextSubMode = currentMode === "D" ? pickRandom(["A", "B", "C"]) : currentMode;
-  const newRoundId = makeRoundId();
-  const token = `next_${newRoundId}_${nextSubMode}_${Date.now()}`;
-  if (!(await claimGenerationLock(token))) return;
-
-  await clearSubmissions();
-  await update(roomRootRef(), { "gameState.round": { ...round, id: newRoundId, subMode: nextSubMode, stage: "init", question: null, options: null, correct: null, decode: null, mission: null, targetPlayerId: null, targetChoice: null, results: null, endsAt: null, autoNextAt: null, participantIds } });
-
-  if (nextSubMode === "A") return generateModeAQuestion(newRoundId, participantIds);
-  if (nextSubMode === "B") return generateModeBQuestion(newRoundId, participantIds);
-  if (nextSubMode === "C") return generateModeCQuestion(newRoundId, participantIds);
-}
 
 // ============================================================
 // Gemini 生成：Mode A/B/C（兜底）
@@ -1376,7 +1327,7 @@ async function main() {
   renderHallPlayers();
   refreshModeButtons();
   setInterval(() => tickUI(), 250);
-  setInterval(() => hostLoopTick().catch((e) => console.error("错误位置: [hostLoopTick interval], 原因:", e)), 800);
+  setInterval(() => gameLoopTick().catch((e) => console.error("错误位置: [gameLoopTick interval], 原因:", e)), 800);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
