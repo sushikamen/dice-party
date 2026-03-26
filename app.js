@@ -98,7 +98,7 @@ function ensureGeminiModel() {
     const apiKey = getGeminiApiKey();
     if (!apiKey) return false;
     const genAI = new GoogleGenerativeAI(apiKey);
-    geminiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash", systemInstruction: SYSTEM_PROMPT });
+    geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: SYSTEM_PROMPT });
     return true;
   } catch (error) {
     console.error("错误位置: [初始化 Gemini Model], 原因:", error);
