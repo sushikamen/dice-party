@@ -1139,36 +1139,6 @@ async function hostRevealRound(round, submissionsForRound) {
   if (subMode === "C" && round.stage === "c_mission") return revealModeC(round, submissionsForRound);
 }
 
-async function applyModeAFallback(roundId, participantIds) {
-  try {
-    const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
-    const startedAt = nowMs();
-    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 15) * 1000;
-
-    await update(roomRootRef(), {
-      "gameState/usedModeAIndices": newUsedIndices,
-      "gameState/round": {
-        ...localState.gameState.round,
-        id: roundId,
-        subMode: "A",
-        stage: "a_answer",
-        participantIds,
-        question: fallbackData.question,
-        options: fallbackData.options,
-        correct: fallbackData.correct,
-        decode: fallbackData.decode,
-        startedAt,
-        endsAt,
-        autoNextAt: null,
-        revealedAt: null,
-        results: null
-      }
-    });
-  } catch (error) {
-    console.error("错误位置: [applyModeAFallback], 原因:", error);
-  }
-}
-
 
 async function generateModeBQuestion(roundId, participantIds) {
   if (!ensureGeminiModel()) return applyModeBFallback(roundId, participantIds);
