@@ -77,7 +77,7 @@ async function generateModeAQuestion(roundId, participantIds) {
   try {
     const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
 
-    const prompt = `为 Mode A 生成“百科小冷知识选择题”（难度不高、适合青少年及以上）。
+    const prompt = `为 Mode A 生成“百科小冷知识选择题”（冷门有趣、跨越多学科、适合青少年及以上）。
 只输出严格有效 JSON，格式为：{"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct":"A|B|C|D","decode":"..."}。
 Language: 简体中文；不要提及与节目/剧情相关内容。
 核心约束：
@@ -1137,66 +1137,6 @@ async function hostRevealRound(round, submissionsForRound) {
   if (subMode === "B" && round.stage === "b_target_choice") return revealModeB_targetChoice(round, submissionsForRound);
   if (subMode === "B" && round.stage === "b_vote") return revealModeB_vote(round, submissionsForRound);
   if (subMode === "C" && round.stage === "c_mission") return revealModeC(round, submissionsForRound);
-}
-
-
-
-// ============================================================
-// Gemini 生成：Mode A/B/C（兜底）
-// ============================================================
-async function generateModeAQuestion(roundId, participantIds) {
-  if (!ensureGeminiModel()) return applyModeAFallback(roundId, participantIds);
-  try {
-    const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
-
-    const prompt = `为 Mode A 生成“百科小冷知识选择题”（冷门有趣、跨越多学科、适合青少年及以上）。
-只输出严格有效 JSON，格式为：{"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct":"A|B|C|D","decode":"..."}。
-Language: 简体中文；不要提及与节目/剧情相关内容。
-核心约束：
-- correct 字段的值必须是 options 中实际存在的键。
-- decode 字段必须是对 correct 选项的严谨、客观的解释，逻辑必须保持高度一致。`;
-
-    const result = await geminiModel.generateContent(prompt);
-    const rawText = result?.response ? result.response.text() : "";
-    const parsed = parseJsonSafely(rawText);
-
-    // 检查 AI 生成的结构是否完整
-    const isAIValid = parsed?.question && parsed?.options && parsed?.correct;
-    const payload = isAIValid ? parsed : fallbackData;
-
-    const startedAt = nowMs();
-    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 15) * 1000;
-
-    // 构建更新数据包
-    const patchData = {
-      "gameState/round": {
-        ...localState.gameState.round,
-        id: roundId,
-        subMode: "A",
-        stage: "a_answer",
-        participantIds,
-        question: payload.question,
-        options: payload.options,
-        correct: payload.correct,
-        decode: payload.decode,
-        startedAt,
-        endsAt,
-        autoNextAt: null,
-        revealedAt: null,
-        results: null
-      }
-    };
-
-    // 只有在调用了备选题的情况下，才更新 Firebase 中的使用记录
-    if (!isAIValid) {
-      patchData["gameState/usedModeAIndices"] = newUsedIndices;
-    }
-
-    await update(roomRootRef(), patchData);
-  } catch (error) {
-    console.error("错误位置: [generateModeAQuestion], 原因:", error);
-    await applyModeAFallback(roundId, participantIds);
-  }
 }
 
 async function applyModeAFallback(roundId, participantIds) {
