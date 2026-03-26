@@ -75,10 +75,19 @@ function getFirebaseConfig() {
 
 function getGeminiApiKey() {
   try {
-    const key = window.APP_CONFIG && window.APP_CONFIG.geminiApiKey;
-    return typeof key === "string" && key.trim() ? key.trim() : null;
+    // 优先从本地存储读取
+    let key = localStorage.getItem("my_gemini_api_key");
+    
+    // 如果没有存储过，或者 Key 是无效的占位符
+    if (!key || key.length < 10) {
+      key = window.prompt("为了 GitHub 部署安全，请粘贴你的 Gemini API Key：\n(该 Key 仅保存在你的浏览器本地，不会上传到代码库)");
+      if (key) {
+        localStorage.setItem("my_gemini_api_key", key.trim());
+      }
+    }
+    return key && key.trim() ? key.trim() : null;
   } catch (error) {
-    console.error("错误位置: [读取 Gemini API Key], 原因:", error);
+    console.error("读取本地存储 Key 失败:", error);
     return null;
   }
 }
@@ -749,6 +758,7 @@ async function gameLoopTick() {
 }
 
 // 初始化游戏状态引擎
+
 async function requestStartParty(selectedMode) {
   if (!selectedMode || !db) return;
   
@@ -759,28 +769,26 @@ async function requestStartParty(selectedMode) {
     const roundId = makeRoundId();
     const subMode = selectedMode === "D" ? pickRandom(["A", "B", "C"]) : selectedMode;
 
+    // 注意：这里使用了 / 符号而非 . 符号，这是 Firebase update 的正确路径语法
     await update(roomRootRef(), {
-      status: "playing",
-      submissions: null, // 🚨 核心修复：绝对不能用 {}，必须用 null 清空
-      locks: null,       // 顺手清空卡死的旧锁
-      gameState: {
-        mode: selectedMode,
-        pause: { active: false },
-        round: {
-          id: roundId,
-          subMode: subMode,
-          stage: "init",
-          participantIds: participantIds,
-          question: null, options: null, correct: null, decode: null, mission: null,
-          targetPlayerId: null, targetChoice: null, results: null, endsAt: null, autoNextAt: null
-        }
+      "status": "playing",
+      "submissions": null, 
+      "locks": null,
+      "gameState/mode": selectedMode,
+      "gameState/pause": { active: false },
+      "gameState/round": {
+        id: roundId,
+        subMode: subMode,
+        stage: "init",
+        participantIds: participantIds,
+        question: null, options: null, correct: null, decode: null, mission: null,
+        targetPlayerId: null, targetChoice: null, results: null, endsAt: null, autoNextAt: null
       }
     });
   } catch (error) {
     console.error("引擎初始化失败:", error);
   }
 }
-
 // 调度当前回合的生成模型
 async function hostGenerateQuestionForRound(round) {
   const subMode = round.subMode;
