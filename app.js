@@ -45,27 +45,25 @@ const MODE_A_FALLBACK_POOL = [
   { question: "圆周率（π）的前三位数字是？", options: { A: "3.12", B: "3.14", C: "3.16", D: "3.18" }, correct: "B", decode: "圆周率是一个无理数，其前三位数字是3.14。" },
   { question: "哪种气体在地球大气层中占比最高？", options: { A: "氧气", B: "二氧化碳", C: "氮气", D: "氢气" }, correct: "C", decode: "地球大气中约78%是氮气，氧气仅占约21%。" },
   { question: "北极熊的皮肤实际上是什么颜色的？", options: { A: "白色", B: "粉色", C: "黑色", D: "透明" }, correct: "C", decode: "北极熊的毛是透明中空的，而它们的皮肤其实是黑色的，有助于吸收太阳光保暖。" }
-  // 此处预置了15道跨领域的冷知识，你可以按照完全相同的格式，将剩余题目直接粘贴在数组内扩充至100题。
 ];
 
 function getNextFallbackQuestionA() {
-  const usedIndices = localState.gameState.usedModeAIndices || [];
+  // 增加 ?. 可选链，确保在组件初始挂载且 gameState 未定义时不会抛出阻塞型异常
+  const usedIndices = localState.gameState?.usedModeAIndices || [];
   let availableIndices = [];
 
   for (let i = 0; i < MODE_A_FALLBACK_POOL.length; i++) {
     if (!usedIndices.includes(i)) availableIndices.push(i);
   }
 
-  // 如果题库已被抽干，重置可用题库
   if (availableIndices.length === 0) {
     availableIndices = MODE_A_FALLBACK_POOL.map((_, i) => i);
   }
 
   const pickedIndex = pickRandom(availableIndices);
   
-  // 生成新的已使用记录
   const newUsedIndices = availableIndices.length === MODE_A_FALLBACK_POOL.length
-    ? [pickedIndex] // 刚重置完毕
+    ? [pickedIndex]
     : [...usedIndices, pickedIndex];
 
   return {
@@ -74,19 +72,85 @@ function getNextFallbackQuestionA() {
   };
 }
 
-async function initFirebase() {
-  const config = getFirebaseConfig();
-  if (!config) {
-    console.error("Firebase config missing in window.APP_CONFIG");
-    return false;
-  }
+async function generateModeAQuestion(roundId, participantIds) {
+  if (!ensureGeminiModel()) return applyModeAFallback(roundId, participantIds);
   try {
-    const app = initializeFirebaseApp(config);
-    db = getDatabase(app);
-    return true;
+    const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
+
+    const prompt = `为 Mode A 生成“百科小冷知识选择题”（难度不高、适合青少年及以上）。
+只输出严格有效 JSON，格式为：{"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correct":"A|B|C|D","decode":"..."}。
+Language: 简体中文；不要提及与节目/剧情相关内容。
+核心约束：
+- correct 字段的值必须是 options 中实际存在的键。
+- decode 字段必须是对 correct 选项的严谨、客观的解释，逻辑必须保持高度一致。`;
+
+    const result = await geminiModel.generateContent(prompt);
+    const rawText = result?.response ? result.response.text() : "";
+    const parsed = parseJsonSafely(rawText);
+
+    const isAIValid = parsed?.question && parsed?.options && parsed?.correct;
+    const payload = isAIValid ? parsed : fallbackData;
+
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 15) * 1000;
+
+    const patchData = {
+      "gameState/round": {
+        ...localState.gameState?.round,
+        id: roundId,
+        subMode: "A",
+        stage: "a_answer",
+        participantIds,
+        question: payload.question,
+        options: payload.options,
+        correct: payload.correct,
+        decode: payload.decode,
+        startedAt,
+        endsAt,
+        autoNextAt: null,
+        revealedAt: null,
+        results: null
+      }
+    };
+
+    if (!isAIValid) {
+      patchData["gameState/usedModeAIndices"] = newUsedIndices;
+    }
+
+    await update(roomRootRef(), patchData);
   } catch (error) {
-    console.error("Firebase initialization failed:", error);
-    return false;
+    console.error("错误位置: [generateModeAQuestion], 原因:", error);
+    await applyModeAFallback(roundId, participantIds);
+  }
+}
+
+async function applyModeAFallback(roundId, participantIds) {
+  try {
+    const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 15) * 1000;
+
+    await update(roomRootRef(), {
+      "gameState/usedModeAIndices": newUsedIndices,
+      "gameState/round": {
+        ...localState.gameState?.round,
+        id: roundId,
+        subMode: "A",
+        stage: "a_answer",
+        participantIds,
+        question: fallbackData.question,
+        options: fallbackData.options,
+        correct: fallbackData.correct,
+        decode: fallbackData.decode,
+        startedAt,
+        endsAt,
+        autoNextAt: null,
+        revealedAt: null,
+        results: null
+      }
+    });
+  } catch (error) {
+    console.error("错误位置: [applyModeAFallback], 原因:", error);
   }
 }
 
@@ -1165,16 +1229,6 @@ async function applyModeAFallback(roundId, participantIds) {
   }
 }
 
-async function applyModeAFallback(roundId, participantIds) {
-  const fallback = { question: "（备用）有趣的冷知识：世界上最大的沙漠是哪个？", options: { A: "撒哈拉沙漠", B: "南极洲沙漠", C: "戈壁沙漠", D: "戈壁滩沙漠" }, correct: "B", decode: "（备用）南极洲虽然下雪少，但降水极少，气候条件符合“沙漠”判定，所以它是最大的沙漠。" };
-  try {
-    const startedAt = nowMs();
-    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 20) * 1000;
-    await update(roomRootRef(), { "gameState/round": { ...localState.gameState.round, id: roundId, subMode: "A", stage: "a_answer", participantIds, question: fallback.question, options: fallback.options, correct: fallback.correct, decode: fallback.decode, startedAt, endsAt, autoNextAt: null, revealedAt: null, results: null } });
-  } catch (error) {
-    console.error("错误位置: [applyModeAFallback], 原因:", error);
-  }
-}
 
 async function generateModeBQuestion(roundId, participantIds) {
   if (!ensureGeminiModel()) return applyModeBFallback(roundId, participantIds);
