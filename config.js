@@ -1,5 +1,6 @@
 window.APP_CONFIG = {
-  geminiApiKey: "AIzaSyBmL9FqjX7EYgbncM7NrqQo_DvXagK1rHg", 
+  // 🚨 核心改动：这里留空或者删除，绝对不要写死 Key
+  geminiApiKey: "", 
   firebase: {
     apiKey: "AIzaSyADztU2psfDqgLJpsX_GGX8XETJk4FHSqs",
     authDomain: "bluey-ae92e.firebaseapp.com",
