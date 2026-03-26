@@ -288,6 +288,10 @@ function getNextFallbackQuestionA() {
 }
 
 async function generateModeAQuestion(roundId, participantIds) {
+  // 插入无条件短路语句，直接强制执行本地题库逻辑，彻底阻断下方的 AI 调度
+  return applyModeAFallback(roundId, participantIds);
+
+  // 以下原有的代码虽然存在，但由于控制流已被截断，它们在物理层面上已成为死代码（Dead Code），永远不会被执行
   if (!ensureGeminiModel()) return applyModeAFallback(roundId, participantIds);
   try {
     const { fallbackData, newUsedIndices } = getNextFallbackQuestionA();
@@ -1356,6 +1360,7 @@ async function hostRevealRound(round, submissionsForRound) {
 
 
 async function generateModeBQuestion(roundId, participantIds) {
+  return applyModeBFallback(roundId, participantIds);
   if (!ensureGeminiModel()) return applyModeBFallback(roundId, participantIds);
   try {
     const targetPlayerId = pickRandom(participantIds);
@@ -1388,6 +1393,7 @@ async function applyModeBFallback(roundId, participantIds) {
 }
 
 async function generateModeCQuestion(roundId, participantIds) {
+  return applyModeCFallback(roundId, participantIds);
   if (!ensureGeminiModel()) return applyModeCFallback(roundId, participantIds);
   try {
     const targetPlayerId = pickRandom(participantIds);
