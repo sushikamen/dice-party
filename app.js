@@ -98,7 +98,7 @@ function ensureGeminiModel() {
     const apiKey = getGeminiApiKey();
     if (!apiKey) return false;
     const genAI = new GoogleGenerativeAI(apiKey);
-    geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction: SYSTEM_PROMPT });
+    geminiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash", systemInstruction: SYSTEM_PROMPT });
     return true;
   } catch (error) {
     console.error("错误位置: [初始化 Gemini Model], 原因:", error);
@@ -335,9 +335,14 @@ function ensureRoundRendered(round) {
   try {
     if (!round) return;
     const key = `${round.id || "?"}_${round.stage || "?"}`;
-    if (key === lastRenderedRoundKey) return;
-    lastRenderedRoundKey = key;
-    openOverlayForRound(round);
+    
+    // 仅在阶段切换时触发弹窗动画
+    if (key !== lastRenderedRoundKey) {
+      lastRenderedRoundKey = key;
+      openOverlayForRound(round);
+    }
+    
+    // 每次数据更新都必须重新渲染内部内容，以反映玩家的提交状态
     renderRoundContent(round);
   } catch (error) {
     console.error("错误位置: [ensureRoundRendered], 原因:", error);
