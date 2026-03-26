@@ -726,7 +726,7 @@ async function gameLoopTick() {
             ...patch,
             "gameState/pause/active": false,
             "gameState/pause/resumeRequested": false,
-            "gameState.pause/appliedByHost": false,
+            "gameState/pause/appliedByHost": false,
             "gameState/pause/resumedByHost": true
           });
         }
@@ -981,7 +981,7 @@ async function hostHandlePause() {
         autoNextAt: typeof round.autoNextAt === "number" ? round.autoNextAt : null
       };
       await update(roomRootRef(), {
-        "gameState/pause": { ...pause, appliedByHost: true, snapshot, appliedAtMs: Date.now() } // 🚨点改斜杠
+        "gameState/pause": { ...pause, appliedByHost: true, snapshot, appliedAtMs: Date.now() }
       });
       return;
     }
@@ -989,15 +989,16 @@ async function hostHandlePause() {
     if (pause.resumeRequested && !pause.resumedByHost) {
       const delta = Date.now() - (pause.appliedAtMs || Date.now());
       const patch = {};
-      if (pause.snapshot?.endsAt != null) patch["gameState/round/endsAt"] = pause.snapshot.endsAt + delta; // 🚨点改斜杠
-      if (pause.snapshot?.autoNextAt != null) patch["gameState/round/autoNextAt"] = pause.snapshot.autoNextAt + delta; // 🚨点改斜杠
+      // 🚨 修正路径：点号全改斜杠
+      if (pause.snapshot?.endsAt != null) patch["gameState/round/endsAt"] = pause.snapshot.endsAt + delta;
+      if (pause.snapshot?.autoNextAt != null) patch["gameState/round/autoNextAt"] = pause.snapshot.autoNextAt + delta;
 
       await update(roomRootRef(), {
         ...patch,
-        "gameState/pause/active": false,           // 🚨点改斜杠
-        "gameState/pause/resumeRequested": false,   // 🚨点改斜杠
-        "gameState/pause/appliedByHost": false,     // 🚨点改斜杠
-        "gameState/pause/resumedByHost": true       // 🚨点改斜杠
+        "gameState/pause/active": false,
+        "gameState/pause/resumeRequested": false,
+        "gameState/pause/appliedByHost": false,
+        "gameState/pause/resumedByHost": true
       });
     }
   } catch (error) {
@@ -1009,14 +1010,6 @@ async function clearSubmissions() {
   try {
     // 🚨 核心修复：Firebase update 不接受 {}，必须用 null 来物理清空路径
     await update(roomRootRef(), { submissions: null }); 
-  } catch (error) {
-    console.error("错误位置: [clearSubmissions], 原因:", error);
-  }
-}
-
-async function clearSubmissions() {
-  try {
-    await update(roomRootRef(), { submissions: {} });
   } catch (error) {
     console.error("错误位置: [clearSubmissions], 原因:", error);
   }
