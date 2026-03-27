@@ -906,36 +906,22 @@ function bindModeBOptionsEnabled(enabled) {
   }
 }
 
-function renderModeB(round) {
-  try {
-    const stage = round.stage;
-    const participants = round.participantIds || [];
-    const subs = getSubmissionsForRound();
-    dom.modeBResults.style.display = "none";
-    dom.modeBWaiting.style.display = "none";
-    dom.modeBOptions.style.display = "none";
-    if (!stage || stage === "init") {
-      dom.modeBWaiting.style.display = "block";
-      dom.modeBWaiting.textContent = "等待Bluey生成吐槽问题……";
-      return renderCountdown(round);
-    }
-    if (stage === "b_target_choice") {
-      dom.modeBQuestion.textContent = round.question || "";
-      const isTarget = myPlayerId === round.targetPlayerId;
-      const mySubmitted = !!subs[myPlayerId];
-      dom.modeBWaiting.style.display = "block";
-      dom.modeBWaiting.textContent = isTarget ? "你正在选择真心话/谎话……" : "等待 Target 完成选择……";
-      dom.modeBOptions.style.display = isTarget ? "flex" : "none";
-      bindModeBOptionsEnabled(isTarget && !mySubmitted);
-      return renderCountdown(round);
-    }
-    if (stage === "b_vote") {
-      dom.modeBQuestion.textContent = "猜测：Target 选了真心话还是谎话？";
-      const isTarget = myPlayerId === round.targetPlayerId;
-      const mySubmitted = !!subs[myPlayerId];
-      const canVote = !isTarget && participants.includes(myPlayerId) && !mySubmitted;
-      dom.modeBWaiting.style.display = "block";
-      dom.modeBWaiting.textContent = isTarget ? "Target 正在揭晓中……" : (mySubmitted ? "你已投票，等待揭晓……" : "现在请投票猜测！");
+if (stage === "b_vote") {
+  // 1. 拿到被选中的玩家 ID
+  const targetId = round.targetPlayerId;
+  
+  // 2. 顺藤摸瓜查出动物名称（利用 ?. 防止玩家突然掉线导致的数据缺失）
+  const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "神秘人" };
+
+  // 3. 使用模板字符串（反引号）动态渲染标题
+  dom.modeBQuestion.textContent = `猜测：${targetMeta.label} 选了真心话还是谎话？`;
+  
+  const isTarget = myPlayerId === targetId; // 这里可以顺便把原本的 round.targetPlayerId 优化为 targetId
+  const mySubmitted = !!subs[myPlayerId];
+  const canVote = !isTarget && participants.includes(myPlayerId) && !mySubmitted;
+  
+  dom.modeBWaiting.style.display = "block";
+  dom.modeBWaiting.textContent = isTarget ? "Target 正在揭晓中……" : (mySubmitted ? "你已投票，等待揭晓……" : "现在请投票猜测！");
       dom.modeBOptions.style.display = canVote ? "flex" : "none";
       bindModeBOptionsEnabled(canVote);
       return renderCountdown(round);
