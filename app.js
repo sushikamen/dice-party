@@ -634,6 +634,7 @@ function bindDom() {
   dom.modeBResults = document.getElementById("modal-mode-b-results");
   dom.modeBResultsList = document.getElementById("modal-mode-b-results-list");
   dom.modeBOptions = document.getElementById("modal-mode-b-options");
+  dom.modeBSpeakBox = document.getElementById("modal-mode-b-speak-box");
   dom.modeBCountdown = document.getElementById("modal-mode-b-countdown");
   dom.modeBCountdownLabel = document.getElementById("modal-mode-b-countdown-label");
 
@@ -928,6 +929,21 @@ function renderModeB(round) {
     dom.modeBResults.style.display = "none";
     dom.modeBWaiting.style.display = "none";
     dom.modeBOptions.style.display = "none";
+
+    if (dom.modeBSpeakBox) dom.modeBSpeakBox.style.display = "none";
+    if (stage === "b_target_speak") {
+    dom.modeBQuestion.textContent = round.question || "";
+  
+  if (isTarget) {
+    dom.modeBWaiting.style.display = "block";
+    dom.modeBWaiting.textContent = "开始你的表演！";
+    if (dom.modeBSpeakBox) dom.modeBSpeakBox.style.display = "flex";
+  } else {
+    dom.modeBWaiting.style.display = "block";
+    dom.modeBWaiting.textContent = `等待 ${targetMeta.label} 完成发言……`;
+  }
+  return renderCountdown(round);
+}
 
     // 变量提升：将 Target 的信息查询提取到公共区域，供各个阶段复用
     const targetId = round.targetPlayerId;
@@ -1431,6 +1447,28 @@ async function submitModeB(val) {
   }
 }
 
+// 新增的独立函数，用于处理发言结束的逻辑
+async function submitModeB_finishSpeak() {
+  const round = localState.gameState?.round;
+  if (!round || round.subMode !== "B" || round.stage !== "b_target_speak") return;
+  if (isPauseActive()) return;
+  try {
+    if (round.targetPlayerId !== myPlayerId) return;
+    
+    // 目标玩家点击发言结束后，驱动状态机进入投票阶段，并重启20秒的倒计时
+    const startedAt = nowMs();
+    const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.B || 20) * 1000;
+    
+    await update(roomRootRef(), {
+      "gameState/round/stage": "b_vote",
+      "gameState/round/startedAt": startedAt,
+      "gameState/round/endsAt": endsAt
+    });
+  } catch (error) {
+    console.error("错误位置: [submitModeB_finishSpeak], 原因:", error);
+  }
+}
+
 async function submitModeC_done() {
   const round = localState.gameState?.round;
   if (!round || round.subMode !== "C" || round.stage !== "c_mission") return;
@@ -1860,6 +1898,10 @@ function bindDomEvents() {
   try {
     dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
       btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
+    });
+ // 下方为新增块，为发言结束按钮绑定独立的事件触发器
+    dom.modeBSpeakBox?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeB_finishSpeak().catch((e) => console.error("错误位置: [ModeB finish speak], 原因:", e)));
     });
   } catch (error) {
     console.error("错误位置: [bind modeB options], 原因:", error);
