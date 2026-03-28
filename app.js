@@ -1424,22 +1424,34 @@ async function submitModeA(optionKey) {
   }
 }
 
+// 1. 玩家点击“真心话/谎话”或“猜测”时的提交逻辑
 async function submitModeB(val) {
   const round = localState.gameState?.round;
   if (!round || round.subMode !== "B") return;
   if (isPauseActive()) return;
   try {
     const subs = getSubmissionsForRound();
-    if (subs[myPlayerId]) return;
+
     if (round.stage === "b_target_choice") {
       if (round.targetPlayerId !== myPlayerId) return;
-      await update(ref(db, `${ROOM_PATH}/submissions/${round.id}/${myPlayerId}`), { choice: val, submittedAt: serverTimestamp() });
+      if (subs[myPlayerId]) return; // 防止狂点按钮重复提交
+
+      // 核心修改：目标玩家选择后，强制改变系统状态进入发言阶段，并清空倒计时
+      await update(roomRootRef(), { 
+        [`submissions/${round.id}/${myPlayerId}`]: { choice: val, submittedAt: serverTimestamp() },
+        "gameState/round/stage": "b_target_speak",
+        "gameState/round/endsAt": null 
+      });
       return;
     }
+    
     if (round.stage === "b_vote") {
       if (round.targetPlayerId === myPlayerId) return;
+      if (subs[myPlayerId]) return;
       const participants = round.participantIds || [];
       if (!participants.includes(myPlayerId)) return;
+      
+      // 记录围观群众的投票
       await update(ref(db, `${ROOM_PATH}/submissions/${round.id}/${myPlayerId}`), { guess: val, submittedAt: serverTimestamp() });
     }
   } catch (error) {
@@ -1447,7 +1459,7 @@ async function submitModeB(val) {
   }
 }
 
-// 新增的独立函数，用于处理发言结束的逻辑
+// 2. 玩家点击“发言结束”的专属逻辑
 async function submitModeB_finishSpeak() {
   const round = localState.gameState?.round;
   if (!round || round.subMode !== "B" || round.stage !== "b_target_speak") return;
@@ -1455,7 +1467,7 @@ async function submitModeB_finishSpeak() {
   try {
     if (round.targetPlayerId !== myPlayerId) return;
     
-    // 目标玩家点击发言结束后，驱动状态机进入投票阶段，并重启20秒的倒计时
+    // 发言结束后，进入投票阶段，重新启动20秒倒计时
     const startedAt = nowMs();
     const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.B || 20) * 1000;
     
@@ -1469,6 +1481,24 @@ async function submitModeB_finishSpeak() {
   }
 }
 
+// 3. 修复主机（Host）自动推进逻辑：如果时间到了Target还没选，强制推入发言阶段，而不是直接跳去投票
+async function revealModeB_targetChoice(round, submissionsForRound) {
+  try {
+    const targetId = round.targetPlayerId;
+    const targetSub = submissionsForRound[targetId] || {};
+    // 如果倒计时结束他还没选，系统帮他随机选一个
+    const targetChoice = targetSub.choice || pickRandom(["truth", "lie"]);
+    
+    // 倒计时结束后，不再进入 b_vote，而是强制进入 b_target_speak 让他发言！
+    await update(roomRootRef(), { 
+      [`submissions/${round.id}/${targetId}`]: { choice: targetChoice, submittedAt: serverTimestamp() },
+      "gameState/round/stage": "b_target_speak", 
+      "gameState/round/endsAt": null 
+    });
+  } catch (error) {
+    console.error("错误位置: [revealModeB_targetChoice], 原因:", error);
+  }
+}
 async function submitModeC_done() {
   const round = localState.gameState?.round;
   if (!round || round.subMode !== "C" || round.stage !== "c_mission") return;
