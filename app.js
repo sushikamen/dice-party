@@ -798,6 +798,10 @@ function renderRoundContent(round) {
   if (round.subMode === "C") return renderModeC(round);
 }
 
+// ============================================================
+// 界面渲染逻辑：Mode A (百科冷知识)
+// ============================================================
+
 function bindModeAOptionEnabled(enabled) {
   try {
     if (!dom.modeAOptions) return;
@@ -828,6 +832,8 @@ function renderModeA(round) {
     const stage = round.stage;
     const participants = round.participantIds || [];
     const subs = getSubmissionsForRound();
+    
+    // 变量提升
     const mySubmitted = !!subs[myPlayerId];
     const canAnswer = stage === "a_answer" && participants.includes(myPlayerId) && !mySubmitted;
 
@@ -835,11 +841,11 @@ function renderModeA(round) {
     dom.modeAWaiting.style.display = "none";
     dom.modeAOptions.style.display = "none";
     dom.modeADecode.textContent = round.decode || "";
-    dom.modeAQuestion.textContent = round.question || "等待Bluey生成题目……";
+    dom.modeAQuestion.textContent = round.question || "等待生成题目……";
 
     if (!stage || stage === "init") {
       dom.modeAWaiting.style.display = "block";
-      dom.modeAWaiting.textContent = "等待Bluey生成题目……";
+      dom.modeAWaiting.textContent = "等待生成题目……";
       return renderCountdown(round);
     }
 
@@ -847,6 +853,7 @@ function renderModeA(round) {
       dom.modeAOptions.style.display = canAnswer ? "flex" : "none";
       dom.modeAWaiting.style.display = canAnswer ? "none" : "block";
       dom.modeAWaiting.textContent = mySubmitted ? "你已提交，等待揭晓……" : "等待其他玩家完成……";
+      
       bindModeAOptionEnabled(canAnswer);
       renderModeAOptions(round.options);
       return renderCountdown(round);
@@ -855,8 +862,7 @@ function renderModeA(round) {
     if (stage === "a_revealed") {
       dom.modeAQuestion.textContent = "本轮揭晓结果：";
       dom.modeAResults.style.display = "block";
-      dom.modeAWaiting.style.display = "none";
-      dom.modeAOptions.style.display = "none";
+      
       renderModeAOptions(round.options);
       renderModeAResults(round);
       return renderCountdown(round);
@@ -871,11 +877,13 @@ function renderModeAResults(round) {
     const participants = round.participantIds || [];
     const results = round.results || {};
     dom.modeAResultsList.innerHTML = "";
+    
     participants.forEach((playerId) => {
       const meta = ANIMAL_META[localState.players[playerId]?.animalKey] || { label: playerId, emoji: "❓" };
       const r = results[playerId] || {};
       const optionKey = r.optionKey;
       const status = !optionKey ? "未作答" : (r.isCorrect ? "回答正确" : "回答错误");
+      
       const item = document.createElement("div");
       item.className = "modal-results-item";
       item.innerHTML = `
@@ -894,6 +902,11 @@ function renderModeAResults(round) {
   }
 }
 
+
+// ============================================================
+// 界面渲染逻辑：Mode B (真心话雷达)
+// ============================================================
+
 function bindModeBOptionsEnabled(enabled) {
   try {
     if (!dom.modeBOptions) return;
@@ -906,26 +919,60 @@ function bindModeBOptionsEnabled(enabled) {
   }
 }
 
-if (stage === "b_vote") {
-  // 1. 拿到被选中的玩家 ID
-  const targetId = round.targetPlayerId;
-  
-  // 2. 顺藤摸瓜查出动物名称（利用 ?. 防止玩家突然掉线导致的数据缺失）
-  const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "神秘人" };
+function renderModeB(round) {
+  try {
+    const stage = round.stage;
+    const participants = round.participantIds || [];
+    const subs = getSubmissionsForRound();
+    
+    dom.modeBResults.style.display = "none";
+    dom.modeBWaiting.style.display = "none";
+    dom.modeBOptions.style.display = "none";
 
-  // 3. 使用模板字符串（反引号）动态渲染标题
-  dom.modeBQuestion.textContent = `猜测：${targetMeta.label} 选了真心话还是谎话？`;
-  
-  const isTarget = myPlayerId === targetId; // 这里可以顺便把原本的 round.targetPlayerId 优化为 targetId
-  const mySubmitted = !!subs[myPlayerId];
-  const canVote = !isTarget && participants.includes(myPlayerId) && !mySubmitted;
-  
-  dom.modeBWaiting.style.display = "block";
-  dom.modeBWaiting.textContent = isTarget ? "Target 正在揭晓中……" : (mySubmitted ? "你已投票，等待揭晓……" : "现在请投票猜测！");
+    // 变量提升：将 Target 的信息查询提取到公共区域，供各个阶段复用
+    const targetId = round.targetPlayerId;
+    // 使用可选链 ?. 防御性读取，并提供兜底对象
+    const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "神秘人" };
+    const isTarget = myPlayerId === targetId;
+    const mySubmitted = !!subs[myPlayerId];
+
+    if (!stage || stage === "init") {
+      dom.modeBWaiting.style.display = "block";
+      dom.modeBWaiting.textContent = "等待生成吐槽问题……";
+      return renderCountdown(round);
+    }
+
+    if (stage === "b_target_choice") {
+      dom.modeBQuestion.textContent = round.question || "";
+      dom.modeBWaiting.style.display = "block";
+      
+      // 举一反三：利用提取好的 targetMeta.label，将等待文案也动态化
+      dom.modeBWaiting.textContent = isTarget 
+        ? "你正在选择真心话/谎话……" 
+        : `等待 ${targetMeta.label} 完成选择……`;
+      
+      dom.modeBOptions.style.display = isTarget ? "flex" : "none";
+      bindModeBOptionsEnabled(isTarget && !mySubmitted);
+      return renderCountdown(round);
+    }
+
+    if (stage === "b_vote") {
+      // 动态渲染标题
+      dom.modeBQuestion.textContent = `猜测：${targetMeta.label} 选了真心话还是谎话？`;
+      
+      const canVote = !isTarget && participants.includes(myPlayerId) && !mySubmitted;
+      
+      dom.modeBWaiting.style.display = "block";
+      // 动态渲染投票等待文案
+      dom.modeBWaiting.textContent = isTarget 
+        ? "大家正在猜测你的选择……" 
+        : (mySubmitted ? "你已投票，等待揭晓……" : "现在请投票猜测！");
+      
       dom.modeBOptions.style.display = canVote ? "flex" : "none";
       bindModeBOptionsEnabled(canVote);
       return renderCountdown(round);
     }
+
     if (stage === "b_revealed") {
       dom.modeBQuestion.textContent = "雷达结果揭晓：";
       dom.modeBResults.style.display = "block";
@@ -944,9 +991,11 @@ function renderModeBResults(round) {
     const targetChoice = results.targetChoice;
     const votes = results.votes || {};
     const participants = round.participantIds || [];
-    const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "Target", emoji: "❓" };
+    const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "神秘人", emoji: "❓" };
 
     dom.modeBResultsList.innerHTML = "";
+    
+    // 渲染 Target 的选择结果
     const header = document.createElement("div");
     header.className = "modal-results-item";
     header.innerHTML = `
@@ -958,12 +1007,14 @@ function renderModeBResults(round) {
     `;
     dom.modeBResultsList.appendChild(header);
 
+    // 渲染其他玩家的猜测结果
     participants.forEach((playerId) => {
       if (playerId === targetId) return;
       const meta = ANIMAL_META[localState.players[playerId]?.animalKey] || { label: playerId, emoji: "❓" };
       const v = votes[playerId];
       const status = !v ? "未作答" : (v.isCorrect ? "猜对了" : "猜错了");
       const guessText = !v ? "" : (v.guess === "truth" ? "真心话" : "谎话");
+      
       const item = document.createElement("div");
       item.className = "modal-results-item";
       item.innerHTML = `
@@ -980,25 +1031,51 @@ function renderModeBResults(round) {
   }
 }
 
+// ============================================================
+// 界面渲染逻辑：Mode C (卧室大冒险)
+// ============================================================
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function renderModeC(round) {
   try {
     const stage = round.stage;
     const subs = getSubmissionsForRound();
+    
     dom.modeCResults.style.display = "none";
     dom.modeCWaiting.style.display = "none";
     dom.modeCOptions.style.display = "none";
+
+    // 变量提升：获取 Target 的名字，准备用于文案替换
+    const targetId = round.targetPlayerId;
+    const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "神秘人", emoji: "❓" };
+    const isTarget = myPlayerId === targetId;
+    const mySubmitted = !!subs[myPlayerId];
+
     if (!stage || stage === "init") {
       dom.modeCMission.textContent = "卧室大冒险";
       dom.modeCWaiting.style.display = "block";
-      dom.modeCWaiting.textContent = "等待Bluey生成任务……";
+      dom.modeCWaiting.textContent = "等待生成任务……";
       return renderCountdown(round);
     }
+
     if (stage === "c_mission") {
       dom.modeCMission.textContent = round.mission || "";
       dom.modeCWaiting.style.display = "block";
-      dom.modeCWaiting.textContent = myPlayerId === round.targetPlayerId ? "Target：准备执行任务吧～" : "等待 Target 完成任务……";
-      const mySubmitted = !!subs[myPlayerId];
-      const canDone = myPlayerId === round.targetPlayerId && !mySubmitted;
+      
+      // 动态文案替换：把生硬的 "Target" 换成动物名称
+      dom.modeCWaiting.textContent = isTarget 
+        ? "请准备执行任务吧～" 
+        : `等待 ${targetMeta.label} 完成任务……`;
+      
+      const canDone = isTarget && !mySubmitted;
       dom.modeCOptions.style.display = canDone ? "flex" : "none";
       dom.modeCOptions.querySelectorAll(".modal-option").forEach((btn) => {
         btn.disabled = !canDone;
@@ -1006,6 +1083,7 @@ function renderModeC(round) {
       });
       return renderCountdown(round);
     }
+
     if (stage === "c_revealed") {
       dom.modeCMission.textContent = "本轮任务回顾：";
       dom.modeCResults.style.display = "block";
@@ -1017,15 +1095,6 @@ function renderModeC(round) {
   }
 }
 
-function escapeHtml(str) {
-  return String(str || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
 function renderModeCResults(round) {
   try {
     const results = round.results || {};
@@ -1033,6 +1102,9 @@ function renderModeCResults(round) {
     const doneByTarget = !!results.doneByTarget;
     const mission = round.mission || "";
     const participants = round.participantIds || [];
+
+    // 依然需要查询 Target 的名字，用于结算界面的播报
+    const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "神秘人", emoji: "❓" };
 
     dom.modeCResultsList.innerHTML = "";
     const missionItem = document.createElement("div");
@@ -1049,7 +1121,9 @@ function renderModeCResults(round) {
       const meta = ANIMAL_META[localState.players[playerId]?.animalKey] || { label: playerId, emoji: "❓" };
       const item = document.createElement("div");
       item.className = "modal-results-item";
+      
       if (playerId !== targetId) {
+        // 如果是围观群众
         item.innerHTML = `
           <div class="modal-results-item-left">
             <span class="modal-results-item-emoji" aria-hidden="true">${meta.emoji}</span><span>${meta.label}</span>
@@ -1057,11 +1131,14 @@ function renderModeCResults(round) {
           <div class="modal-results-item-right">观看中</div>
         `;
       } else {
+        // 如果是 Target 本人，动态替换掉原本的“Target已完成”
         item.innerHTML = `
           <div class="modal-results-item-left">
             <span class="modal-results-item-emoji" aria-hidden="true">${meta.emoji}</span><span>${meta.label}</span>
           </div>
-          <div class="modal-results-item-right">${doneByTarget ? "Target 已完成！" : "时间到，Target 未完成"}</div>
+          <div class="modal-results-item-right">
+            ${doneByTarget ? `${meta.label} 已完成！` : `时间到，${meta.label} 未完成`}
+          </div>
         `;
       }
       dom.modeCResultsList.appendChild(item);
