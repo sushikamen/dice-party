@@ -682,21 +682,19 @@ body {
 /* 🌟 专用样式：不可用动物弹窗（去丑优化版） */
 /* ============================================================ */
 
-/* 1. 给这个弹窗的内容区增加一些内边距和圆角优化 */
-.modal-content-taken {
-  padding: 40px 30px !important; /* 增加上下内边距，看起来更透气 */
-  border: 1px solid rgba(255,193,7,0.2); /* 淡淡的金色边框，更有质感 */
-}
+/* ============================================================ */
+/* 🌟 专用样式：不可用动物弹窗（全网统一风格版） */
+/* ============================================================ */
 
-/* 2. 标题样式：使用警告金，移除图标后字体稍微加大 */
+/* 1. 标题样式：彻底抛弃黄色！使用游戏统一的主题色蓝色（CYAN） */
 #modal-animal-taken .modal-title {
-  color: #ffc107; /* 使用游戏统一的警告/金提示色 */
+  color: #00bcd4 !important; /* 使用你的蓝色主题色 */
   font-size: 1.8rem;
   margin-top: 0;
   margin-bottom: 20px;
 }
 
-/* 3. 副标题样式：优化换行和行高 */
+/* 2. 副标题样式：优化换行和行高 */
 #modal-animal-taken .modal-subtitle {
   color: rgba(255,255,255,0.9);
   line-height: 1.6;
@@ -704,7 +702,8 @@ body {
   margin-bottom: 30px;
 }
 
-/* 4. 🌟 解决按钮居中奇怪的核心逻辑：使用 Flex 居中，不再强制全宽 */
+/* 3. 🌟 解决按钮内部文字不居中的核心逻辑： */
+/* 我们要针对这个弹窗，强制覆盖原本局促的 modal-options 布局 */
 #modal-animal-taken .modal-options {
   display: flex;
   justify-content: center; /* 核心：让子元素（按钮）在水平方向上绝对居中 */
@@ -712,15 +711,15 @@ body {
   padding: 0;
 }
 
-/* 5. 🌟 按钮样式优化：不再全宽，恢复标准按钮尺寸，并在内部居中文字 */
+/* 4. 🌟 按钮样式优化：不再全宽，恢复标准按钮尺寸，并在内部居中文字 */
 #modal-animal-taken .modal-option.single-confirm {
   width: auto; /* 🚨 彻底放弃 width: 100%，恢复正常按钮宽度 */
   min-width: 140px; /* 设置一个最小宽度，保证质感 */
   padding: 12px 24px;
   justify-content: center; /* 让按钮内部的“好的”文字绝对居中 */
   
-  /* 恢复原有样式特点 */
-  border-left: 4px solid #ffc107;
+  /* 恢复原有样式特点，但把金边也改成主题蓝色 */
+  border-left: 4px solid #00bcd4;
 }
 
 #modal-animal-taken .modal-option.single-confirm .modal-option-text {
