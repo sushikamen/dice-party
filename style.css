@@ -679,50 +679,55 @@ body {
 }
 
 /* ============================================================ */
-/* 🌟 专用样式：不可用动物弹窗（完美居中清新版） */
+/* 🌟 专用样式：不可用动物弹窗（扁平清新版） */
 /* ============================================================ */
 
-/* 1. 让整个弹窗的内容绝对居中，增加呼吸感 */
+/* 1. 让整个弹窗的内容区域扁平化，不再带有繁复的内边距，文字绝对居中 */
 #modal-animal-taken .modal-content {
   text-align: center;
-  padding: 36px 24px 32px;
+  padding: 30px 24px 24px; /* 干净、专业的内边距 */
+  background: var(--color-bg-modal) !important;
+  border-radius: var(--border-radius-card);
+  box-shadow: var(--shadow-card) !important;
 }
 
-/* 2. 标题：调用全局定义的蓝绿色，完美融入主题 */
+/* 2. 大标题样式：彻底抛弃黄橙色，使用全局定义的蓝绿色主题色 */
 #modal-animal-taken .modal-title {
-  color: var(--color-primary) !important;
-  font-size: 22px;
-  margin: 0 0 10px;
+  color: var(--color-primary) !important; /* 使用你的蓝绿色主题色 */
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin: 0 0 16px;
 }
 
-/* 3. 副标题：使用深灰色，解决白底隐身问题 */
+/* 3. 副标题样式：彻底抛弃白色！强制使用全局text深灰，解决隐身问题 */
 #modal-animal-taken .modal-subtitle {
-  color: var(--color-text-sub) !important;
-  font-size: 15px;
+  color: var(--color-text-sub) !important; /* 使用你的全局深灰色 */
+  font-size: 1.1rem;
   line-height: 1.6;
-  margin: 0 0 26px;
+  margin: 0 0 28px;
 }
 
-/* 4. 独立的新版确认按钮：像胶囊一样圆润、居中且立体 */
-.btn-primary-solid {
-  background: var(--color-primary);
-  color: #fff;
+/* 4. 🌟 新增：新版独立按钮样式，不再全宽，恢复圆润、居中且立体 */
+.btn-primary {
+  background: var(--color-primary) !important;
+  color: #fff !important;
   border: none;
-  border-radius: 99px;
+  border-radius: 99px; /* 胶囊形，极具现代感 */
   padding: 12px 36px;
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
-  box-shadow: var(--shadow-soft);
-  transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+  box-shadow: var(--shadow-soft) !important;
+  transition: transform 0.1s, box-shadow 0.2s;
   display: inline-block;
+  line-height: 1; /* 保证文字在按钮内垂直居中 */
 }
 
-.btn-primary-solid:hover {
-  box-shadow: var(--shadow-card);
+.btn-primary:hover {
+  box-shadow: var(--shadow-card) !important;
   opacity: 0.9;
 }
 
-.btn-primary-solid:active {
+.btn-primary:active {
   transform: scale(0.96);
 }
