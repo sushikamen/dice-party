@@ -693,6 +693,39 @@ function refreshLobbyUI() {
   }
 }
 
+function refreshAnimalSelectionUI() {
+  try {
+    if (!dom.animalList) return;
+
+    // 1. 找出所有已经被【别人】选走的动物
+    const takenAnimals = [];
+    Object.entries(localState.players || {}).forEach(([playerId, pData]) => {
+      // 只要不是自己，且选了动物，就放进“已被占”名单里
+      if (playerId !== myPlayerId && pData.animalKey) {
+        takenAnimals.push(pData.animalKey);
+      }
+    });
+
+    // 2. 遍历大厅里的四个动物按钮
+    dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
+      const animalKey = card.dataset.animal;
+      const isTaken = takenAnimals.includes(animalKey);
+
+      if (isTaken) {
+        card.style.opacity = "0.3";
+        card.style.filter = "grayscale(100%)";
+        card.dataset.disabled = "true"; // 打个物理拦截标记
+      } else {
+        card.style.opacity = "1";
+        card.style.filter = "none";
+        card.dataset.disabled = "false"; // 恢复正常标记
+      }
+    });
+  } catch (error) {
+    console.error("错误位置: [refreshAnimalSelectionUI], 原因:", error);
+  }
+}
+
 function refreshViewForJoinState() {
   try {
     const isIn = !!localState.players?.[myPlayerId];
@@ -1853,6 +1886,12 @@ function bindDomEvents() {
       dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
         card.addEventListener("click", () => {
           try {
+            // <--- 新增防截杀逻辑：如果有别人选了，直接弹窗并中断
+            if (card.dataset.disabled === "true") {
+              alert("该小动物已被其他玩家选择啦，换一个吧！");
+              return;
+            }
+
             const animalKey = card.dataset.animal;
             const wasSelected = currentSelectedAnimalKey === animalKey;
             dom.animalList.querySelectorAll(".animal-card").forEach((c) => c.classList.remove("animal-card-selected"));
@@ -1865,9 +1904,6 @@ function bindDomEvents() {
         });
       });
     }
-  } catch (error) {
-    console.error("错误位置: [bind animalList], 原因:", error);
-  }
 
   try {
     dom.joinBtn?.addEventListener("click", () => joinParty().catch((e) => console.error("错误位置: [joinBtn click], 原因:", e)));
@@ -1979,6 +2015,7 @@ async function main() {
   refreshViewForJoinState();
   renderHallPlayers();
   refreshModeButtons();
+  refreshAnimalSelectionUI();
   setInterval(() => tickUI(), 250);
   setInterval(() => gameLoopTick().catch((e) => console.error("错误位置: [gameLoopTick interval], 原因:", e)), 800);
 }
