@@ -671,3 +671,21 @@ body {
     gap: 8px;
   }
 }
+
+/* 🌟 新增：Lobby 加载状态提示文字的呼吸动画 */
+@keyframes lobbyStatusPulse {
+  from { opacity: 0.5; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* 🌟 新增：针对 Unavailable 弹窗的“单确定”按钮特殊样式 */
+#modal-animal-taken .modal-option.single-confirm {
+  width: 100%;
+  margin: 0 auto;
+  justify-content: center;
+  /* 可以给它一个警告 hint 的颜色，比如稍微偏黄/橙 */
+  border-left-color: #ffc107;
+}
+#modal-animal-taken .modal-option.single-confirm .modal-option-text {
+  flex-grow: 0;
+}
