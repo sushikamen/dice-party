@@ -18,6 +18,7 @@ let pendingStartMode = null;
 let lastRenderedRoundKey = "";
 let db = null;
 let geminiModel = null;
+let serverTimeOffset = 0;
 
 const ROOM_PATH = "partyRoom";
 const GAMEMODE_DURATION_SECONDS = { A: 15, B: 15, C: 30 };
@@ -538,7 +539,8 @@ function parseJsonSafely(rawText) {
 }
 
 function nowMs() {
-  return Date.now();
+  // 核心修复：本地时间 + 服务器误差 = 绝对标准的云端时间
+  return Date.now() + serverTimeOffset;
 }
 
 function msToSecondsCeil(ms) {
@@ -1265,7 +1267,8 @@ async function gameLoopTick() {
     if (pause.active) {
       if (pause.resumeRequested && !pause.resumedByHost) {
         if (await claimLock("resume_pause", 5000)) {
-          const delta = Date.now() - (pause.appliedAtMs || Date.now());
+          // 🚨 修复时间幽灵：这里必须用我们自己写的 nowMs()，不能用 Date.now()！
+          const delta = nowMs() - (pause.appliedAtMs || nowMs());
           const patch = {};
           if (pause.snapshot?.endsAt != null) patch["gameState/round/endsAt"] = pause.snapshot.endsAt + delta;
           if (pause.snapshot?.autoNextAt != null) patch["gameState/round/autoNextAt"] = pause.snapshot.autoNextAt + delta;
@@ -1282,16 +1285,19 @@ async function gameLoopTick() {
       return;
     }
 
-    // ===== 核心修复：抢到锁后，绝对不要手动释放锁！让它自然过期，防止别的客户端重复触发 =====
     if (round.stage === "init") {
       if (await claimLock(`generate_${round.id}`, 15000)) {
         return await hostGenerateQuestionForRound(round);
       }
     }
 
-    if (shouldRevealByTime(round)) {
+    // 🌟 提取当前所有人的提交记录
+    const currentSubs = getSubmissionsForRound();
+
+    // 🌟 智能事件驱动：时间到了，或者（不管时间到没到）人全投完了，立刻开奖！
+    if (shouldRevealByTime(round) || isRoundFullySubmitted(round, currentSubs)) {
       if (await claimLock(`reveal_${round.id}_${round.stage}`, 8000)) {
-        return await hostRevealRound(round, getSubmissionsForRound());
+        return await hostRevealRound(round, currentSubs);
       }
     }
 
@@ -1545,6 +1551,34 @@ function shouldRevealByTime(round) {
   if (nowMs() < round.endsAt) return false;
   return ["a_answer", "b_target_choice", "b_vote", "c_mission"].includes(round.stage);
 }
+
+function isRoundFullySubmitted(round, subs) {
+  try {
+    const participants = round.participantIds || [];
+    if (!participants.length) return false;
+
+    // 针对 Mode B 的投票阶段：排除 Target 本人，看剩余的吃瓜群众是否全部投完
+    if (round.subMode === "B" && round.stage === "b_vote") {
+      const targetId = round.targetPlayerId;
+      const voters = participants.filter(p => p !== targetId);
+      if (voters.length === 0) return false;
+      return voters.every(p => subs[p] && subs[p].guess);
+    }
+
+    // 🌟 新增：针对 Mode A 的全员答题阶段：所有人必须都投完才算数
+    if (round.subMode === "A" && round.stage === "a_answer") {
+      // .every() 的意思是：必须每一个玩家(p)都在数据库里留下了 optionKey（也就是选了ABCD）
+      return participants.every(p => subs[p] && subs[p].optionKey);
+    }
+
+    // 后续如果你想加 Mode C 的全员判断，也可以写在这里
+    return false;
+  } catch (error) {
+    console.error("错误位置: [isRoundFullySubmitted], 原因:", error);
+    return false;
+  }
+}
+
 function isAutoNextDue(round) {
   if (!round.autoNextAt || typeof round.autoNextAt !== "number") return false;
   if (nowMs() < round.autoNextAt) return false;
@@ -1854,11 +1888,17 @@ function attachFirebaseListeners() {
   if (listenersAttached || !db) return;
   listenersAttached = true;
   try {
+    // 新增：监听 Firebase 官方提供的时间偏移量频道
+    onValue(ref(db, ".info/serverTimeOffset"), (snap) => {
+      serverTimeOffset = snap.val() || 0;
+    });
+
     onValue(playersRef(), (snap) => {
       localState.players = snap.val() || {};
       refreshViewForJoinState();
       renderHallPlayers();
       refreshModeButtons();
+      refreshAnimalSelectionUI(); // 这里是刚刚加的去重刷新
       maybeRenderGame();
     });
     onValue(statusRef(), (snap) => {
