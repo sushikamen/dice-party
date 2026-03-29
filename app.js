@@ -959,32 +959,20 @@ function renderModeB(round) {
     const participants = round.participantIds || [];
     const subs = getSubmissionsForRound();
     
+    // 1. 每次刷新前，先把所有特种面板隐藏
     dom.modeBResults.style.display = "none";
     dom.modeBWaiting.style.display = "none";
     dom.modeBOptions.style.display = "none";
-
     if (dom.modeBSpeakBox) dom.modeBSpeakBox.style.display = "none";
-    if (stage === "b_target_speak") {
-    dom.modeBQuestion.textContent = round.question || "";
-  
-  if (isTarget) {
-    dom.modeBWaiting.style.display = "block";
-    dom.modeBWaiting.textContent = "开始你的表演！";
-    if (dom.modeBSpeakBox) dom.modeBSpeakBox.style.display = "flex";
-  } else {
-    dom.modeBWaiting.style.display = "block";
-    dom.modeBWaiting.textContent = `等待 ${targetMeta.label} 完成发言……`;
-  }
-  return renderCountdown(round);
-}
 
-    // 变量提升：将 Target 的信息查询提取到公共区域，供各个阶段复用
+    // 2. 🌟 核心修复：把“查户口”放到所有 if 判断的最前面！
+    // 只有先查明了这回合的 Target 是谁，下面才能肆无忌惮地使用 isTarget 和 targetMeta
     const targetId = round.targetPlayerId;
-    // 使用可选链 ?. 防御性读取，并提供兜底对象
     const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "神秘人" };
     const isTarget = myPlayerId === targetId;
     const mySubmitted = !!subs[myPlayerId];
 
+    // 3. 接下来才是严格按阶段（stage）渲染画面
     if (!stage || stage === "init") {
       dom.modeBWaiting.style.display = "block";
       dom.modeBWaiting.textContent = "等待生成吐槽问题……";
@@ -995,7 +983,6 @@ function renderModeB(round) {
       dom.modeBQuestion.textContent = round.question || "";
       dom.modeBWaiting.style.display = "block";
       
-      // 举一反三：利用提取好的 targetMeta.label，将等待文案也动态化
       dom.modeBWaiting.textContent = isTarget 
         ? "你正在选择真心话/谎话……" 
         : `等待 ${targetMeta.label} 完成选择……`;
@@ -1005,14 +992,28 @@ function renderModeB(round) {
       return renderCountdown(round);
     }
 
+    // 🌟 把新加的发言阶段，安安稳稳地放在查完户口的下面
+    if (stage === "b_target_speak") {
+      dom.modeBQuestion.textContent = round.question || "";
+      
+      if (isTarget) {
+        dom.modeBWaiting.style.display = "block";
+        dom.modeBWaiting.textContent = "开始你的表演！";
+        // 只有 Target 才能看到“发言结束”面板
+        if (dom.modeBSpeakBox) dom.modeBSpeakBox.style.display = "flex";
+      } else {
+        dom.modeBWaiting.style.display = "block";
+        dom.modeBWaiting.textContent = `等待 ${targetMeta.label} 完成发言……`;
+      }
+      return renderCountdown(round);
+    }
+
     if (stage === "b_vote") {
-      // 动态渲染标题
       dom.modeBQuestion.textContent = `猜测：${targetMeta.label} 选了真心话还是谎话？`;
       
       const canVote = !isTarget && participants.includes(myPlayerId) && !mySubmitted;
       
       dom.modeBWaiting.style.display = "block";
-      // 动态渲染投票等待文案
       dom.modeBWaiting.textContent = isTarget 
         ? "大家正在猜测你的选择……" 
         : (mySubmitted ? "你已投票，等待揭晓……" : "现在请投票猜测！");
