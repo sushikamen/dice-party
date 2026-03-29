@@ -959,20 +959,24 @@ function renderModeB(round) {
     const participants = round.participantIds || [];
     const subs = getSubmissionsForRound();
     
-    // 1. 每次刷新前，先把所有特种面板隐藏
+    // 1. 初始化：每次刷新画面前，先把所有特种面板全部“隐身”
     dom.modeBResults.style.display = "none";
     dom.modeBWaiting.style.display = "none";
     dom.modeBOptions.style.display = "none";
     if (dom.modeBSpeakBox) dom.modeBSpeakBox.style.display = "none";
 
-    // 2. 🌟 核心修复：把“查户口”放到所有 if 判断的最前面！
-    // 只有先查明了这回合的 Target 是谁，下面才能肆无忌惮地使用 isTarget 和 targetMeta
+    // 🌟 新增修复：如果没有结束时间戳，就把倒计时组件连根拔起（隐藏）
+    const hasCountdown = round.endsAt != null || round.autoNextAt != null;
+    if (dom.modeBCountdown) dom.modeBCountdown.style.display = hasCountdown ? "block" : "none";
+    if (dom.modeBCountdownLabel) dom.modeBCountdownLabel.style.display = hasCountdown ? "block" : "none";
+
+    // 2. 查户口：必须在所有的 if 判断之前，先把 Target 的身份查明！
     const targetId = round.targetPlayerId;
     const targetMeta = ANIMAL_META[localState.players[targetId]?.animalKey] || { label: "神秘人" };
     const isTarget = myPlayerId === targetId;
     const mySubmitted = !!subs[myPlayerId];
 
-    // 3. 接下来才是严格按阶段（stage）渲染画面
+    // 3. 开始根据舞台（stage）分发剧本
     if (!stage || stage === "init") {
       dom.modeBWaiting.style.display = "block";
       dom.modeBWaiting.textContent = "等待生成吐槽问题……";
@@ -992,14 +996,12 @@ function renderModeB(round) {
       return renderCountdown(round);
     }
 
-    // 🌟 把新加的发言阶段，安安稳稳地放在查完户口的下面
     if (stage === "b_target_speak") {
       dom.modeBQuestion.textContent = round.question || "";
       
       if (isTarget) {
         dom.modeBWaiting.style.display = "block";
         dom.modeBWaiting.textContent = "开始你的表演！";
-        // 只有 Target 才能看到“发言结束”面板
         if (dom.modeBSpeakBox) dom.modeBSpeakBox.style.display = "flex";
       } else {
         dom.modeBWaiting.style.display = "block";
@@ -1033,7 +1035,6 @@ function renderModeB(round) {
     console.error("错误位置: [renderModeB], 原因:", error);
   }
 }
-
 function renderModeBResults(round) {
   try {
     const results = round.results || {};
