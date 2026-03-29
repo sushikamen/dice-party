@@ -697,16 +697,22 @@ function refreshAnimalSelectionUI() {
   try {
     if (!dom.animalList) return;
 
-    // 1. 找出所有已经被【别人】选走的动物
     const takenAnimals = [];
+    
+    // 🌟 监控探头 1：看看我是谁，以及系统目前拿到的数据库长什么样
+    console.log("【排查去重】当前我的ID:", myPlayerId);
+    console.log("【排查去重】当前数据库里的所有玩家:", JSON.parse(JSON.stringify(localState.players || {})));
+
     Object.entries(localState.players || {}).forEach(([playerId, pData]) => {
-      // 只要不是自己，且选了动物，就放进“已被占”名单里
+      // 如果不是我自己，且他选了动物，就加进黑名单
       if (playerId !== myPlayerId && pData.animalKey) {
         takenAnimals.push(pData.animalKey);
       }
     });
 
-    // 2. 遍历大厅里的四个动物按钮
+    // 🌟 监控探头 2：看看系统最终计算出来的黑名单对不对
+    console.log("【排查去重】最终被别人占用的动物:", takenAnimals);
+
     dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
       const animalKey = card.dataset.animal;
       const isTaken = takenAnimals.includes(animalKey);
@@ -714,11 +720,11 @@ function refreshAnimalSelectionUI() {
       if (isTaken) {
         card.style.opacity = "0.3";
         card.style.filter = "grayscale(100%)";
-        card.dataset.disabled = "true"; // 打个物理拦截标记
+        card.dataset.disabled = "true"; 
       } else {
         card.style.opacity = "1";
         card.style.filter = "none";
-        card.dataset.disabled = "false"; // 恢复正常标记
+        card.dataset.disabled = "false"; 
       }
     });
   } catch (error) {
