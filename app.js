@@ -959,13 +959,13 @@ function renderModeB(round) {
     const participants = round.participantIds || [];
     const subs = getSubmissionsForRound();
     
-    // 1. 初始化：每次刷新画面前，先把所有特种面板全部“隐身”
+    // 1. 初始化：每次刷新画面前，先把所有特种面板全部隐藏
     dom.modeBResults.style.display = "none";
     dom.modeBWaiting.style.display = "none";
     dom.modeBOptions.style.display = "none";
     if (dom.modeBSpeakBox) dom.modeBSpeakBox.style.display = "none";
 
-    // 🌟 新增修复：如果没有结束时间戳，就把倒计时组件连根拔起（隐藏）
+    // 新增修复：如果没有结束时间戳，就把倒计时组件连根拔起（隐藏）
     const hasCountdown = round.endsAt != null || round.autoNextAt != null;
     if (dom.modeBCountdown) dom.modeBCountdown.style.display = hasCountdown ? "block" : "none";
     if (dom.modeBCountdownLabel) dom.modeBCountdownLabel.style.display = hasCountdown ? "block" : "none";
@@ -1035,6 +1035,7 @@ function renderModeB(round) {
     console.error("错误位置: [renderModeB], 原因:", error);
   }
 }
+
 function renderModeBResults(round) {
   try {
     const results = round.results || {};
