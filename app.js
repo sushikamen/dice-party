@@ -1890,6 +1890,9 @@ async function revealModeC(round, submissionsForRound) {
 // 初始化与事件绑定
 // ============================================================
 
+// ============================================================
+// 初始化与事件绑定
+// ============================================================
 let listenersAttached = false;
 function attachFirebaseListeners() {
   if (listenersAttached || !db) return;
@@ -1929,9 +1932,120 @@ function attachFirebaseListeners() {
       localState.submissions = snap.val() || {};
       maybeRenderGame();
     });
-  // 👇 就是这里！你之前可能漏贴了这个 catch 块
   } catch (error) {
     console.error("错误位置: [attachFirebaseListeners], 原因:", error);
+  }
+}
+
+function bindDomEvents() {
+  try {
+    if (dom.animalList) {
+      dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
+        card.addEventListener("click", () => {
+          try {
+            // 防截杀逻辑：如果有别人选了，直接弹出自定义弹窗
+            if (card.dataset.disabled === "true") {
+              openModal(dom.modalAnimalTaken);
+              return;
+            }
+
+            const animalKey = card.dataset.animal;
+            const wasSelected = currentSelectedAnimalKey === animalKey;
+            dom.animalList.querySelectorAll(".animal-card").forEach((c) => c.classList.remove("animal-card-selected"));
+            currentSelectedAnimalKey = wasSelected ? null : animalKey;
+            if (currentSelectedAnimalKey) card.classList.add("animal-card-selected");
+            refreshLobbyUI();
+          } catch (error) {
+            console.error("错误位置: [动物选择 click], 原因:", error);
+          }
+        });
+      });
+    }
+  } catch (error) {
+    console.error("错误位置: [bind animalList], 原因:", error);
+  }
+
+  try {
+    dom.btnAnimalTakenOk?.addEventListener("click", () => closeModal(dom.modalAnimalTaken));
+    dom.modalAnimalTakenClose?.addEventListener("click", () => closeModal(dom.modalAnimalTaken));
+  } catch (error) {
+    console.error("错误位置: [bind animal taken modal], 原因:", error);
+  }
+
+  try {
+    dom.joinBtn?.addEventListener("click", () => joinParty().catch((e) => console.error("错误位置: [joinBtn click], 原因:", e)));
+  } catch (error) {
+    console.error("错误位置: [bind joinBtn], 原因:", error);
+  }
+
+  try {
+    dom.modeList?.querySelectorAll(".mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        try {
+          pendingStartMode = btn.dataset.mode;
+          openModal(dom.modalConfirmStart);
+        } catch (error) {
+          console.error("错误位置: [mode btn click], 原因:", error);
+        }
+      });
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeList], 原因:", error);
+  }
+
+  try {
+    dom.btnConfirmStart?.addEventListener("click", () => {
+      closeModal(dom.modalConfirmStart);
+      requestStartParty(pendingStartMode).catch((e) => console.error("错误位置: [confirm start click], 原因:", e));
+    });
+    dom.btnCancelStart?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
+    dom.btnConfirmStartClose?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
+  } catch (error) {
+    console.error("错误位置: [bind confirm modal], 原因:", error);
+  }
+
+  try {
+    dom.btnPauseContinue?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause continue], 原因:", e)));
+    dom.btnPauseClose?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause close], 原因:", e)));
+    dom.btnPauseReturnHall?.addEventListener("click", () => requestReturnHall().catch((e) => console.error("错误位置: [pause return hall], 原因:", e)));
+  } catch (error) {
+    console.error("错误位置: [bind pause modal], 原因:", error);
+  }
+
+  try {
+    dom.modeAAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort A], 原因:", e)));
+    dom.modeBAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort B], 原因:", e)));
+    dom.modeCAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort C], 原因:", e)));
+  } catch (error) {
+    console.error("错误位置: [bind abort buttons], 原因:", error);
+  }
+
+  try {
+    dom.modeAOptions?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeA(btn.dataset.option).catch((e) => console.error("错误位置: [ModeA option], 原因:", e)));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeA options], 原因:", error);
+  }
+
+  try {
+    dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
+    });
+    // 新增块：为 Mode B 的“发言结束”按钮绑定独立的窃听器
+    dom.modeBSpeakBox?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeB_finishSpeak().catch((e) => console.error("错误位置: [ModeB finish speak], 原因:", e)));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeB options], 原因:", error);
+  }
+
+  try {
+    dom.modeCOptions?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeC_done().catch((e) => console.error("错误位置: [ModeC done], 原因:", e)));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeC options], 原因:", error);
   }
 }
 
