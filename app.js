@@ -605,6 +605,12 @@ function bindDom() {
   dom.joinBtn = document.getElementById("btn-join-party");
   dom.playerList = document.getElementById("player-list");
   dom.modeList = document.getElementById("mode-list");
+  // 1. 新增：网络连接文字容器
+  dom.lobbyLoadingStatus = document.getElementById("lobby-loading-status");
+  // 2. 新增：Unavailable（已占用）弹窗相关组件
+  dom.modalAnimalTaken = document.getElementById("modal-animal-taken");
+  dom.btnAnimalTakenOk = document.getElementById("btn-animal-taken-ok");
+  dom.modalAnimalTakenClose = document.getElementById("modal-animal-taken-close");
 
   dom.modalConfirmStart = document.getElementById("modal-confirm-start");
   dom.btnConfirmStart = document.getElementById("btn-confirm-start");
@@ -630,13 +636,13 @@ function bindDom() {
   dom.modeACountdown = document.getElementById("modal-mode-a-countdown");
   dom.modeACountdownLabel = document.getElementById("modal-mode-a-countdown-label");
 
-  dom.modeBAbort = document.getElementById("modal-mode-b-abort");
   dom.modeBQuestion = document.getElementById("modal-mode-b-question");
   dom.modeBWaiting = document.getElementById("modal-mode-b-waiting");
-  dom.modeBResults = document.getElementById("modal-mode-b-results");
-  dom.modeBResultsList = document.getElementById("modal-mode-b-results-list");
   dom.modeBOptions = document.getElementById("modal-mode-b-options");
   dom.modeBSpeakBox = document.getElementById("modal-mode-b-speak-box");
+  dom.modeBResults = document.getElementById("modal-mode-b-results");
+  dom.modeBResultsList = document.getElementById("modal-mode-b-results-list");
+  dom.modeBAbort = document.getElementById("modal-mode-b-abort");
   dom.modeBCountdown = document.getElementById("modal-mode-b-countdown");
   dom.modeBCountdownLabel = document.getElementById("modal-mode-b-countdown-label");
 
@@ -1906,6 +1912,9 @@ function attachFirebaseListeners() {
       
       maybeRenderGame();
     });
+    // 🌟 新增修复：当 Firebase 数据成功传回来（连接大厅成功）后，强制把加载文字隐身！
+      if (dom.lobbyLoadingStatus) dom.lobbyLoadingStatus.style.display = "none";
+    });
     
     onValue(statusRef(), (snap) => {
       localState.status = snap.val() || "lobby";
@@ -1928,71 +1937,38 @@ function attachFirebaseListeners() {
 }
 
 function bindDomEvents() {
-  try {
-    if (dom.animalList) {
-      dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
-        card.addEventListener("click", () => {
-          try {
-            // 防截杀逻辑：如果有别人选了，直接弹窗并中断
-            if (card.dataset.disabled === "true") {
-              alert("该小动物已被其他玩家选择啦，换一个吧！");
-              return;
-            }
-
-            const animalKey = card.dataset.animal;
-            const wasSelected = currentSelectedAnimalKey === animalKey;
-            dom.animalList.querySelectorAll(".animal-card").forEach((c) => c.classList.remove("animal-card-selected"));
-            currentSelectedAnimalKey = wasSelected ? null : animalKey;
-            if (currentSelectedAnimalKey) card.classList.add("animal-card-selected");
-            refreshLobbyUI();
-          } catch (error) {
-            console.error("错误位置: [动物选择 click], 原因:", error);
-          }
-        });
-      });
-    }
-  } catch (error) {
-    console.error("错误位置: [bind animalList], 原因:", error);
-  }
-
-  try {
-    dom.joinBtn?.addEventListener("click", () => joinParty().catch((e) => console.error("错误位置: [joinBtn click], 原因:", e)));
-  } catch (error) {
-    console.error("错误位置: [bind joinBtn], 原因:", error);
-  }
-
-  try {
-    dom.modeList?.querySelectorAll(".mode-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
+  if (dom.animalList) {
+    dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
+      card.addEventListener("click", () => {
         try {
-          pendingStartMode = btn.dataset.mode;
-          openModal(dom.modalConfirmStart);
+          // 防截杀逻辑：如果有别人选了，直接弹窗并中断
+          if (card.dataset.disabled === "true") {
+            // 🚨 旧做法（弃用）：alert("该小动物已被其他玩家选择啦，换一个吧！");
+            
+            // 🌟 新做法：弹出界面统一的自定义弹窗！
+            openModal(dom.modalAnimalTaken);
+            return;
+          }
+
+          const animalKey = card.dataset.animal;
+          const wasSelected = currentSelectedAnimalKey === animalKey;
+          dom.animalList.querySelectorAll(".animal-card").forEach((c) => c.classList.remove("animal-card-selected"));
+          currentSelectedAnimalKey = wasSelected ? null : animalKey;
+          if (currentSelectedAnimalKey) card.classList.add("animal-card-selected");
+          refreshLobbyUI();
         } catch (error) {
-          console.error("错误位置: [mode btn click], 原因:", error);
+          console.error("错误位置: [动物选择 click], 原因:", error);
         }
       });
     });
-  } catch (error) {
-    console.error("错误位置: [bind modeList], 原因:", error);
   }
 
+  // 🌟 2. 新增：给 Unavailable 自定义弹窗绑定“我知道了”关闭事件
   try {
-    dom.btnConfirmStart?.addEventListener("click", () => {
-      closeModal(dom.modalConfirmStart);
-      requestStartParty(pendingStartMode).catch((e) => console.error("错误位置: [confirm start click], 原因:", e));
-    });
-    dom.btnCancelStart?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
-    dom.btnConfirmStartClose?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
+    dom.btnAnimalTakenOk?.addEventListener("click", () => closeModal(dom.modalAnimalTaken));
+    dom.modalAnimalTakenClose?.addEventListener("click", () => closeModal(dom.modalAnimalTaken));
   } catch (error) {
-    console.error("错误位置: [bind confirm modal], 原因:", error);
-  }
-
-  try {
-    dom.btnPauseContinue?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause continue], 原因:", e)));
-    dom.btnPauseClose?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause close], 原因:", e)));
-    dom.btnPauseReturnHall?.addEventListener("click", () => requestReturnHall().catch((e) => console.error("错误位置: [pause return hall], 原因:", e)));
-  } catch (error) {
-    console.error("错误位置: [bind pause modal], 原因:", error);
+    console.error("错误位置: [bind animal taken modal], 原因:", error);
   }
 
   try {
@@ -2015,23 +1991,14 @@ function bindDomEvents() {
     dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
       btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
     });
-    // 新增块：为发言结束按钮绑定专属窃听器
+    // 🌟 新增块：为 Mode B 的“发言结束”按钮绑定独立的窃听器
     dom.modeBSpeakBox?.querySelectorAll(".modal-option").forEach((btn) => {
       btn.addEventListener("click", () => submitModeB_finishSpeak().catch((e) => console.error("错误位置: [ModeB finish speak], 原因:", e)));
     });
   } catch (error) {
     console.error("错误位置: [bind modeB options], 原因:", error);
   }
-
-  try {
-    dom.modeCOptions?.querySelectorAll(".modal-option").forEach((btn) => {
-      btn.addEventListener("click", () => submitModeC_done().catch((e) => console.error("错误位置: [ModeC done], 原因:", e)));
-    });
-  } catch (error) {
-    console.error("错误位置: [bind modeC options], 原因:", error);
-  }
-}
-
+  
 async function initFirebase() {
   try {
     const config = getFirebaseConfig();
@@ -2055,6 +2022,23 @@ async function initFirebase() {
 async function main() {
   bindDom();
   bindDomEvents();
+
+  // 1. 🌟 悲观渲染策略（极速锁死 + 文字反馈）
+  // 在向 Firebase 发起网络请求之前，立刻把所有小动物置灰并锁定。
+  if (dom.animalList) {
+    dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
+      card.style.opacity = "0.3";
+      card.style.filter = "grayscale(100%)";
+      card.dataset.disabled = "true";
+    });
+  }
+  
+  // 🌟 新增：在锁死动物的同时，强制把加载文字显示出来（带有 CSS 呼吸动画）！
+  if (dom.lobbyLoadingStatus) {
+    dom.lobbyLoadingStatus.textContent = "正在连接大厅...";
+    dom.lobbyLoadingStatus.style.display = "block";
+  }
+  
   refreshLobbyUI();
 
   const ok = await initFirebase();
