@@ -1946,12 +1946,10 @@ function bindDomEvents() {
       dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
         card.addEventListener("click", () => {
           try {
-            // 防截杀逻辑：如果有别人选了，直接弹出自定义弹窗
             if (card.dataset.disabled === "true") {
               openModal(dom.modalAnimalTaken);
               return;
             }
-
             const animalKey = card.dataset.animal;
             const wasSelected = currentSelectedAnimalKey === animalKey;
             dom.animalList.querySelectorAll(".animal-card").forEach((c) => c.classList.remove("animal-card-selected"));
@@ -2035,7 +2033,6 @@ function bindDomEvents() {
     dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
       btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
     });
-    // 为 Mode B 的“发言结束”按钮绑定独立的窃听器
     dom.modeBSpeakBox?.querySelectorAll(".modal-option").forEach((btn) => {
       btn.addEventListener("click", () => submitModeB_finishSpeak().catch((e) => console.error("错误位置: [ModeB finish speak], 原因:", e)));
     });
@@ -2073,7 +2070,6 @@ async function main() {
   bindDom();
   bindDomEvents();
 
-  // 悲观渲染策略（极速锁死 + 文字反馈）
   if (dom.animalList) {
     dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
       card.style.opacity = "0.3";
@@ -2082,7 +2078,6 @@ async function main() {
     });
   }
   
-  // 显示加载文字
   if (dom.lobbyLoadingStatus) {
     dom.lobbyLoadingStatus.textContent = "正在连接大厅...";
     dom.lobbyLoadingStatus.style.display = "block";
