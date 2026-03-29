@@ -1889,12 +1889,13 @@ async function revealModeC(round, submissionsForRound) {
 // ============================================================
 // 初始化与事件绑定
 // ============================================================
+
 let listenersAttached = false;
 function attachFirebaseListeners() {
   if (listenersAttached || !db) return;
   listenersAttached = true;
   try {
-    // 🌟 时间校准频道：抹平手机和电脑的系统时钟误差
+    // 时间校准频道
     onValue(ref(db, ".info/serverTimeOffset"), (snap) => {
       if (typeof serverTimeOffset !== 'undefined') {
         serverTimeOffset = snap.val() || 0;
@@ -1906,13 +1907,10 @@ function attachFirebaseListeners() {
       refreshViewForJoinState();
       renderHallPlayers();
       refreshModeButtons();
-      
-      // 🌟 核心破案点：必须在这里（拿到数据后）强制刷新一次小动物界面！
       refreshAnimalSelectionUI(); 
-      
       maybeRenderGame();
-    });
-    // 🌟 新增修复：当 Firebase 数据成功传回来（连接大厅成功）后，强制把加载文字隐身！
+      
+      // 当 Firebase 数据成功传回来后，隐藏加载文字
       if (dom.lobbyLoadingStatus) dom.lobbyLoadingStatus.style.display = "none";
     });
     
@@ -1931,74 +1929,12 @@ function attachFirebaseListeners() {
       localState.submissions = snap.val() || {};
       maybeRenderGame();
     });
+  // 👇 就是这里！你之前可能漏贴了这个 catch 块
   } catch (error) {
     console.error("错误位置: [attachFirebaseListeners], 原因:", error);
   }
 }
 
-function bindDomEvents() {
-  if (dom.animalList) {
-    dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        try {
-          // 防截杀逻辑：如果有别人选了，直接弹窗并中断
-          if (card.dataset.disabled === "true") {
-            // 🚨 旧做法（弃用）：alert("该小动物已被其他玩家选择啦，换一个吧！");
-            
-            // 🌟 新做法：弹出界面统一的自定义弹窗！
-            openModal(dom.modalAnimalTaken);
-            return;
-          }
-
-          const animalKey = card.dataset.animal;
-          const wasSelected = currentSelectedAnimalKey === animalKey;
-          dom.animalList.querySelectorAll(".animal-card").forEach((c) => c.classList.remove("animal-card-selected"));
-          currentSelectedAnimalKey = wasSelected ? null : animalKey;
-          if (currentSelectedAnimalKey) card.classList.add("animal-card-selected");
-          refreshLobbyUI();
-        } catch (error) {
-          console.error("错误位置: [动物选择 click], 原因:", error);
-        }
-      });
-    });
-  }
-
-  // 🌟 2. 新增：给 Unavailable 自定义弹窗绑定“我知道了”关闭事件
-  try {
-    dom.btnAnimalTakenOk?.addEventListener("click", () => closeModal(dom.modalAnimalTaken));
-    dom.modalAnimalTakenClose?.addEventListener("click", () => closeModal(dom.modalAnimalTaken));
-  } catch (error) {
-    console.error("错误位置: [bind animal taken modal], 原因:", error);
-  }
-
-  try {
-    dom.modeAAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort A], 原因:", e)));
-    dom.modeBAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort B], 原因:", e)));
-    dom.modeCAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort C], 原因:", e)));
-  } catch (error) {
-    console.error("错误位置: [bind abort buttons], 原因:", error);
-  }
-
-  try {
-    dom.modeAOptions?.querySelectorAll(".modal-option").forEach((btn) => {
-      btn.addEventListener("click", () => submitModeA(btn.dataset.option).catch((e) => console.error("错误位置: [ModeA option], 原因:", e)));
-    });
-  } catch (error) {
-    console.error("错误位置: [bind modeA options], 原因:", error);
-  }
-
-  try {
-    dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
-      btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
-    });
-    // 🌟 新增块：为 Mode B 的“发言结束”按钮绑定独立的窃听器
-    dom.modeBSpeakBox?.querySelectorAll(".modal-option").forEach((btn) => {
-      btn.addEventListener("click", () => submitModeB_finishSpeak().catch((e) => console.error("错误位置: [ModeB finish speak], 原因:", e)));
-    });
-  } catch (error) {
-    console.error("错误位置: [bind modeB options], 原因:", error);
-  }
-  
 async function initFirebase() {
   try {
     const config = getFirebaseConfig();
@@ -2006,12 +1942,8 @@ async function initFirebase() {
       console.error("找不到 Firebase 配置信息 (APP_CONFIG.firebase)");
       return false;
     }
-    
-    // 初始化 App
     const app = initializeFirebaseApp(config);
-    // 给顶部的全局变量 db 赋值，这样后续所有游戏逻辑才能正常使用
     db = getDatabase(app);
-    
     console.log("Firebase 初始化成功");
     return true;
   } catch (error) {
@@ -2019,12 +1951,12 @@ async function initFirebase() {
     return false;
   }
 }
+
 async function main() {
   bindDom();
   bindDomEvents();
 
-  // 1. 🌟 悲观渲染策略（极速锁死 + 文字反馈）
-  // 在向 Firebase 发起网络请求之前，立刻把所有小动物置灰并锁定。
+  // 悲观渲染策略（极速锁死 + 文字反馈）
   if (dom.animalList) {
     dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
       card.style.opacity = "0.3";
@@ -2033,17 +1965,18 @@ async function main() {
     });
   }
   
-  // 🌟 新增：在锁死动物的同时，强制把加载文字显示出来（带有 CSS 呼吸动画）！
+  // 显示加载文字
   if (dom.lobbyLoadingStatus) {
     dom.lobbyLoadingStatus.textContent = "正在连接大厅...";
     dom.lobbyLoadingStatus.style.display = "block";
   }
-  
+
   refreshLobbyUI();
 
-  const ok = await initFirebase();
+  const ok = await initFirebase(); 
   if (!ok) return;
-  attachFirebaseListeners();
+  
+  attachFirebaseListeners(); 
   refreshViewForJoinState();
   renderHallPlayers();
   refreshModeButtons();
