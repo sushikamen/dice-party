@@ -678,24 +678,21 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* ============================================================ */
-/* 🌟 专用样式：不可用动物弹窗（最终完美版） */
-/* ============================================================ */
-
 /* 1. 🚨 核心修复：将弹窗内容面板设为白色背景色，不再透明 🚨 */
 #modal-animal-taken .modal-content {
-  background-color: #ffffff !important; /* 强制白色背景 */
+  background-color: #ffffff !important; 
   padding: 36px 24px 30px;
-  border-radius: var(--border-radius-card); /* 保持一致的圆角 */
-  box-shadow: var(--shadow-card);
   
-  /* 为了让内部的大标题和按钮整体居中，我们依旧在容器上使用 text-align: center */
+  /* 👇 核心修改：直接写死 20px（你可以改成 16px 或 24px 看看哪个顺眼） */
+  border-radius: 20px !important; 
+  
+  box-shadow: var(--shadow-card);
   text-align: center;
 }
 
 /* 2. 大标题：保持主题蓝色（CYAN） */
 #modal-animal-taken .modal-title {
-  color: var(--color-primary) !important; /* 使用你的蓝色主题色变量 */
+  color: var(--color-primary) !important; 
   font-size: 1.8rem;
   font-weight: bold;
   margin: 0 0 16px;
@@ -703,42 +700,48 @@ body {
 
 /* 3. 🚨 核心修改：副标题从左开始自然排列，颜色使用纯黑 🚨 */
 #modal-animal-taken .modal-subtitle {
-  color: #000000 !important; /* 强制纯黑色 */
-  text-align: left !important; /* 强制靠左对齐，不跟随父级居中 */
-  
-  display: block; /* 确保占据整行 */
+  color: #000000 !important; 
+  text-align: left !important; 
+  display: block; 
   font-size: 1.1rem;
   line-height: 1.6;
-  margin: 0 0 28px; /* 下方留白，拉开与按钮的距离 */
+  margin: 0 0 28px; 
 }
 
 /* 4. 按钮容器：强制居中按钮本身 */
 #modal-animal-taken .modal-options {
   display: flex;
-  justify-content: center; /* 核心：让子元素（按钮）在水平方向上绝对居中 */
+  justify-content: center; 
   margin-top: 0;
   padding: 0;
 }
 
-/* 5. 按钮样式：保持主题蓝背景，白字，圆润胶囊形 */
-#modal-animal-taken .modal-option.btn-primary {
-  width: auto; /* 不再强制全宽 */
-  min-width: 140px; /* 设置最小宽度，更有质感 */
-  padding: 12px 36px;
-  
-  background-color: var(--color-primary) !important; /* 主题蓝色 */
-  color: #ffffff !important; /* 白色文字 */
-  
+/* 5. 🌟 新版独立按钮样式 */
+.btn-primary {
+  background: var(--color-primary) !important;
+  color: #fff !important;
   border: none;
-  border-radius: 99px; /* 胶囊形圆角 */
-  
-  justify-content: center; /* 按钮内部文字绝对居中 */
-  cursor: pointer;
+  border-radius: 99px; /* 胶囊形 */
+  padding: 12px 36px;
+  font-size: 16px;
   font-weight: bold;
-  
-  transition: background-color 0.2s;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft) !important;
+  transition: transform 0.1s, box-shadow 0.2s;
+  display: inline-block;
+  line-height: 1; 
 }
 
-#modal-animal-taken .modal-option.btn-primary:hover {
-  background-color: var(--color-primary-dark, #0097a7) !important; /* 鼠标悬停稍微加深 */
+.btn-primary:hover {
+  box-shadow: var(--shadow-card) !important;
+  opacity: 0.9;
+}
+
+.btn-primary:active {
+  transform: scale(0.96);
+}
+
+/* 👇 优化点：删除了 .modal-option 的强绑定，直接指向 .btn-primary，同时写死加深色号最稳妥 */
+#modal-animal-taken .btn-primary:hover {
+  background-color: #0097a7 !important; 
 }
