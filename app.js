@@ -1514,24 +1514,6 @@ async function submitModeB_finishSpeak() {
   }
 }
 
-// 3. 修复主机（Host）自动推进逻辑：如果时间到了Target还没选，强制推入发言阶段，而不是直接跳去投票
-async function revealModeB_targetChoice(round, submissionsForRound) {
-  try {
-    const targetId = round.targetPlayerId;
-    const targetSub = submissionsForRound[targetId] || {};
-    // 如果倒计时结束他还没选，系统帮他随机选一个
-    const targetChoice = targetSub.choice || pickRandom(["truth", "lie"]);
-    
-    // 倒计时结束后，不再进入 b_vote，而是强制进入 b_target_speak 让他发言！
-    await update(roomRootRef(), { 
-      [`submissions/${round.id}/${targetId}`]: { choice: targetChoice, submittedAt: serverTimestamp() },
-      "gameState/round/stage": "b_target_speak", 
-      "gameState/round/endsAt": null 
-    });
-  } catch (error) {
-    console.error("错误位置: [revealModeB_targetChoice], 原因:", error);
-  }
-}
 async function submitModeC_done() {
   const round = localState.gameState?.round;
   if (!round || round.subMode !== "C" || round.stage !== "c_mission") return;
@@ -1782,6 +1764,7 @@ async function applyModeCFallback(roundId, participantIds) {
 // ============================================================
 // Reveal（host 写回 gameState）
 // ============================================================
+// Reveal（host 写回 gameState）
 async function revealModeA(round, submissionsForRound) {
   try {
     const participantIds = round.participantIds || [];
@@ -1802,13 +1785,20 @@ async function revealModeA(round, submissionsForRound) {
   }
 }
 
+// 修复主机（Host）自动推进逻辑：如果时间到了Target还没选，强制推入发言阶段，而不是直接跳去投票
 async function revealModeB_targetChoice(round, submissionsForRound) {
   try {
     const targetId = round.targetPlayerId;
     const targetSub = submissionsForRound[targetId] || {};
+    // 如果倒计时结束他还没选，系统帮他随机选一个
     const targetChoice = targetSub.choice || pickRandom(["truth", "lie"]);
-    const revealedAt = nowMs();
-    await update(roomRootRef(), { "gameState/round": { ...round, stage: "b_vote", targetChoice, endsAt: revealedAt + (GAMEMODE_DURATION_SECONDS.B || 20) * 1000, autoNextAt: null, results: null } });
+    
+    // 倒计时结束后，不再进入 b_vote，而是强制进入 b_target_speak 让他发言！
+    await update(roomRootRef(), { 
+      [`submissions/${round.id}/${targetId}`]: { choice: targetChoice, submittedAt: serverTimestamp() },
+      "gameState/round/stage": "b_target_speak", 
+      "gameState/round/endsAt": null 
+    });
   } catch (error) {
     console.error("错误位置: [revealModeB_targetChoice], 原因:", error);
   }
@@ -1886,7 +1876,7 @@ function bindDomEvents() {
       dom.animalList.querySelectorAll(".animal-card").forEach((card) => {
         card.addEventListener("click", () => {
           try {
-            // <--- 新增防截杀逻辑：如果有别人选了，直接弹窗并中断
+            // 防截杀逻辑：如果有别人选了，直接弹窗并中断
             if (card.dataset.disabled === "true") {
               alert("该小动物已被其他玩家选择啦，换一个吧！");
               return;
@@ -1904,6 +1894,9 @@ function bindDomEvents() {
         });
       });
     }
+  } catch (error) {
+    console.error("错误位置: [bind animalList], 原因:", error);
+  }
 
   try {
     dom.joinBtn?.addEventListener("click", () => joinParty().catch((e) => console.error("错误位置: [joinBtn click], 原因:", e)));
@@ -1926,6 +1919,61 @@ function bindDomEvents() {
     console.error("错误位置: [bind modeList], 原因:", error);
   }
 
+  try {
+    dom.btnConfirmStart?.addEventListener("click", () => {
+      closeModal(dom.modalConfirmStart);
+      requestStartParty(pendingStartMode).catch((e) => console.error("错误位置: [confirm start click], 原因:", e));
+    });
+    dom.btnCancelStart?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
+    dom.btnConfirmStartClose?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
+  } catch (error) {
+    console.error("错误位置: [bind confirm modal], 原因:", error);
+  }
+
+  try {
+    dom.btnPauseContinue?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause continue], 原因:", e)));
+    dom.btnPauseClose?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause close], 原因:", e)));
+    dom.btnPauseReturnHall?.addEventListener("click", () => requestReturnHall().catch((e) => console.error("错误位置: [pause return hall], 原因:", e)));
+  } catch (error) {
+    console.error("错误位置: [bind pause modal], 原因:", error);
+  }
+
+  try {
+    dom.modeAAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort A], 原因:", e)));
+    dom.modeBAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort B], 原因:", e)));
+    dom.modeCAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort C], 原因:", e)));
+  } catch (error) {
+    console.error("错误位置: [bind abort buttons], 原因:", error);
+  }
+
+  try {
+    dom.modeAOptions?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeA(btn.dataset.option).catch((e) => console.error("错误位置: [ModeA option], 原因:", e)));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeA options], 原因:", error);
+  }
+
+  try {
+    dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
+    });
+    // 新增块，为发言结束按钮绑定独立的事件触发器
+    dom.modeBSpeakBox?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeB_finishSpeak().catch((e) => console.error("错误位置: [ModeB finish speak], 原因:", e)));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeB options], 原因:", error);
+  }
+
+  try {
+    dom.modeCOptions?.querySelectorAll(".modal-option").forEach((btn) => {
+      btn.addEventListener("click", () => submitModeC_done().catch((e) => console.error("错误位置: [ModeC done], 原因:", e)));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind modeC options], 原因:", error);
+  }
+}
   try {
     dom.btnConfirmStart?.addEventListener("click", () => {
       closeModal(dom.modalConfirmStart);
