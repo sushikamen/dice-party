@@ -1888,9 +1888,11 @@ function attachFirebaseListeners() {
   if (listenersAttached || !db) return;
   listenersAttached = true;
   try {
-    // 新增：监听 Firebase 官方提供的时间偏移量频道
+    // 🌟 时间校准频道：抹平手机和电脑的系统时钟误差
     onValue(ref(db, ".info/serverTimeOffset"), (snap) => {
-      serverTimeOffset = snap.val() || 0;
+      if (typeof serverTimeOffset !== 'undefined') {
+        serverTimeOffset = snap.val() || 0;
+      }
     });
 
     onValue(playersRef(), (snap) => {
@@ -1898,18 +1900,24 @@ function attachFirebaseListeners() {
       refreshViewForJoinState();
       renderHallPlayers();
       refreshModeButtons();
-      refreshAnimalSelectionUI(); // 这里是刚刚加的去重刷新
+      
+      // 🌟 核心破案点：必须在这里（拿到数据后）强制刷新一次小动物界面！
+      refreshAnimalSelectionUI(); 
+      
       maybeRenderGame();
     });
+    
     onValue(statusRef(), (snap) => {
       localState.status = snap.val() || "lobby";
       refreshViewForJoinState();
       maybeRenderGame();
     });
+    
     onValue(gameStateRef(), (snap) => {
       localState.gameState = snap.val() || {};
       maybeRenderGame();
     });
+    
     onValue(submissionsRef(), (snap) => {
       localState.submissions = snap.val() || {};
       maybeRenderGame();
