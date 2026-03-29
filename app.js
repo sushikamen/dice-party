@@ -1893,6 +1893,9 @@ async function revealModeC(round, submissionsForRound) {
 // ============================================================
 // 初始化与事件绑定
 // ============================================================
+// ============================================================
+// 初始化与事件绑定 (下半身核心代码)
+// ============================================================
 let listenersAttached = false;
 function attachFirebaseListeners() {
   if (listenersAttached || !db) return;
@@ -2032,7 +2035,7 @@ function bindDomEvents() {
     dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
       btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
     });
-    // 新增块：为 Mode B 的“发言结束”按钮绑定独立的窃听器
+    // 为 Mode B 的“发言结束”按钮绑定独立的窃听器
     dom.modeBSpeakBox?.querySelectorAll(".modal-option").forEach((btn) => {
       btn.addEventListener("click", () => submitModeB_finishSpeak().catch((e) => console.error("错误位置: [ModeB finish speak], 原因:", e)));
     });
