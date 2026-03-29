@@ -1958,7 +1958,7 @@ function bindDomEvents() {
     dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
       btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
     });
-    // 新增块，为发言结束按钮绑定独立的事件触发器
+    // 新增块：为发言结束按钮绑定专属窃听器
     dom.modeBSpeakBox?.querySelectorAll(".modal-option").forEach((btn) => {
       btn.addEventListener("click", () => submitModeB_finishSpeak().catch((e) => console.error("错误位置: [ModeB finish speak], 原因:", e)));
     });
@@ -1974,64 +1974,7 @@ function bindDomEvents() {
     console.error("错误位置: [bind modeC options], 原因:", error);
   }
 }
-  try {
-    dom.btnConfirmStart?.addEventListener("click", () => {
-      closeModal(dom.modalConfirmStart);
-      requestStartParty(pendingStartMode).catch((e) => console.error("错误位置: [confirm start click], 原因:", e));
-    });
-    dom.btnCancelStart?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
-    dom.btnConfirmStartClose?.addEventListener("click", () => closeModal(dom.modalConfirmStart));
-  } catch (error) {
-    console.error("错误位置: [bind confirm modal], 原因:", error);
-  }
 
-  try {
-    dom.btnPauseContinue?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause continue], 原因:", e)));
-    dom.btnPauseClose?.addEventListener("click", () => requestContinue().catch((e) => console.error("错误位置: [pause close], 原因:", e)));
-    dom.btnPauseReturnHall?.addEventListener("click", () => requestReturnHall().catch((e) => console.error("错误位置: [pause return hall], 原因:", e)));
-  } catch (error) {
-    console.error("错误位置: [bind pause modal], 原因:", error);
-  }
-
-  try {
-    dom.modeAAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort A], 原因:", e)));
-    dom.modeBAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort B], 原因:", e)));
-    dom.modeCAbort?.addEventListener("click", () => requestPause().catch((e) => console.error("错误位置: [abort C], 原因:", e)));
-  } catch (error) {
-    console.error("错误位置: [bind abort buttons], 原因:", error);
-  }
-
-  try {
-    dom.modeAOptions?.querySelectorAll(".modal-option").forEach((btn) => {
-      btn.addEventListener("click", () => submitModeA(btn.dataset.option).catch((e) => console.error("错误位置: [ModeA option], 原因:", e)));
-    });
-  } catch (error) {
-    console.error("错误位置: [bind modeA options], 原因:", error);
-  }
-
-  try {
-    dom.modeBOptions?.querySelectorAll(".modal-option").forEach((btn) => {
-      btn.addEventListener("click", () => submitModeB(btn.dataset.option).catch((e) => console.error("错误位置: [ModeB option], 原因:", e)));
-    });
- // 下方为新增块，为发言结束按钮绑定独立的事件触发器
-    dom.modeBSpeakBox?.querySelectorAll(".modal-option").forEach((btn) => {
-      btn.addEventListener("click", () => submitModeB_finishSpeak().catch((e) => console.error("错误位置: [ModeB finish speak], 原因:", e)));
-    });
-  } catch (error) {
-    console.error("错误位置: [bind modeB options], 原因:", error);
-  }
-
-  try {
-    dom.modeCOptions?.querySelectorAll(".modal-option").forEach(() => {
-      // 仅一个按钮，data-option 可忽略
-    });
-    dom.modeCOptions?.querySelectorAll(".modal-option").forEach((btn) => {
-      btn.addEventListener("click", () => submitModeC_done().catch((e) => console.error("错误位置: [ModeC done], 原因:", e)));
-    });
-  } catch (error) {
-    console.error("错误位置: [bind modeC options], 原因:", error);
-  }
-}
 async function initFirebase() {
   try {
     const config = getFirebaseConfig();
