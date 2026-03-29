@@ -679,50 +679,50 @@ body {
 }
 
 /* ============================================================ */
-/* 🌟 专用样式：不可用动物弹窗（去丑优化版） */
+/* 🌟 专用样式：不可用动物弹窗（完美居中清新版） */
 /* ============================================================ */
 
-/* ============================================================ */
-/* 🌟 专用样式：不可用动物弹窗（全网统一风格版） */
-/* ============================================================ */
+/* 1. 让整个弹窗的内容绝对居中，增加呼吸感 */
+#modal-animal-taken .modal-content {
+  text-align: center;
+  padding: 36px 24px 32px;
+}
 
-/* 1. 标题样式：彻底抛弃黄色！使用游戏统一的主题色蓝色（CYAN） */
+/* 2. 标题：调用全局定义的蓝绿色，完美融入主题 */
 #modal-animal-taken .modal-title {
-  color: #00bcd4 !important; /* 使用你的蓝色主题色 */
-  font-size: 1.8rem;
-  margin-top: 0;
-  margin-bottom: 20px;
+  color: var(--color-primary) !important;
+  font-size: 22px;
+  margin: 0 0 10px;
 }
 
-/* 2. 副标题样式：优化换行和行高 */
+/* 3. 副标题：使用深灰色，解决白底隐身问题 */
 #modal-animal-taken .modal-subtitle {
-  color: rgba(255,255,255,0.9);
+  color: var(--color-text-sub) !important;
+  font-size: 15px;
   line-height: 1.6;
-  font-size: 1.1rem;
-  margin-bottom: 30px;
+  margin: 0 0 26px;
 }
 
-/* 3. 🌟 解决按钮内部文字不居中的核心逻辑： */
-/* 我们要针对这个弹窗，强制覆盖原本局促的 modal-options 布局 */
-#modal-animal-taken .modal-options {
-  display: flex;
-  justify-content: center; /* 核心：让子元素（按钮）在水平方向上绝对居中 */
-  margin-top: 0;
-  padding: 0;
-}
-
-/* 4. 🌟 按钮样式优化：不再全宽，恢复标准按钮尺寸，并在内部居中文字 */
-#modal-animal-taken .modal-option.single-confirm {
-  width: auto; /* 🚨 彻底放弃 width: 100%，恢复正常按钮宽度 */
-  min-width: 140px; /* 设置一个最小宽度，保证质感 */
-  padding: 12px 24px;
-  justify-content: center; /* 让按钮内部的“好的”文字绝对居中 */
-  
-  /* 恢复原有样式特点，但把金边也改成主题蓝色 */
-  border-left: 4px solid #00bcd4;
-}
-
-#modal-animal-taken .modal-option.single-confirm .modal-option-text {
-  flex-grow: 0; /* 文字不再疯狂生长 */
+/* 4. 独立的新版确认按钮：像胶囊一样圆润、居中且立体 */
+.btn-primary-solid {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 99px;
+  padding: 12px 36px;
+  font-size: 16px;
   font-weight: bold;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+  display: inline-block;
+}
+
+.btn-primary-solid:hover {
+  box-shadow: var(--shadow-card);
+  opacity: 0.9;
+}
+
+.btn-primary-solid:active {
+  transform: scale(0.96);
 }
