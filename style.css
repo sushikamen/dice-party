@@ -678,14 +678,52 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
-/* 🌟 新增：针对 Unavailable 弹窗的“单确定”按钮特殊样式 */
-#modal-animal-taken .modal-option.single-confirm {
-  width: 100%;
-  margin: 0 auto;
-  justify-content: center;
-  /* 可以给它一个警告 hint 的颜色，比如稍微偏黄/橙 */
-  border-left-color: #ffc107;
+/* ============================================================ */
+/* 🌟 专用样式：不可用动物弹窗（去丑优化版） */
+/* ============================================================ */
+
+/* 1. 给这个弹窗的内容区增加一些内边距和圆角优化 */
+.modal-content-taken {
+  padding: 40px 30px !important; /* 增加上下内边距，看起来更透气 */
+  border: 1px solid rgba(255,193,7,0.2); /* 淡淡的金色边框，更有质感 */
 }
+
+/* 2. 标题样式：使用警告金，移除图标后字体稍微加大 */
+#modal-animal-taken .modal-title {
+  color: #ffc107; /* 使用游戏统一的警告/金提示色 */
+  font-size: 1.8rem;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+/* 3. 副标题样式：优化换行和行高 */
+#modal-animal-taken .modal-subtitle {
+  color: rgba(255,255,255,0.9);
+  line-height: 1.6;
+  font-size: 1.1rem;
+  margin-bottom: 30px;
+}
+
+/* 4. 🌟 解决按钮居中奇怪的核心逻辑：使用 Flex 居中，不再强制全宽 */
+#modal-animal-taken .modal-options {
+  display: flex;
+  justify-content: center; /* 核心：让子元素（按钮）在水平方向上绝对居中 */
+  margin-top: 0;
+  padding: 0;
+}
+
+/* 5. 🌟 按钮样式优化：不再全宽，恢复标准按钮尺寸，并在内部居中文字 */
+#modal-animal-taken .modal-option.single-confirm {
+  width: auto; /* 🚨 彻底放弃 width: 100%，恢复正常按钮宽度 */
+  min-width: 140px; /* 设置一个最小宽度，保证质感 */
+  padding: 12px 24px;
+  justify-content: center; /* 让按钮内部的“好的”文字绝对居中 */
+  
+  /* 恢复原有样式特点 */
+  border-left: 4px solid #ffc107;
+}
+
 #modal-animal-taken .modal-option.single-confirm .modal-option-text {
-  flex-grow: 0;
+  flex-grow: 0; /* 文字不再疯狂生长 */
+  font-weight: bold;
 }
