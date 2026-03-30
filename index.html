@@ -220,6 +220,28 @@
             <p class="modal-decode-text" id="modal-mode-a-decode"></p>
           </div>
         </div>
+      <!-- 排行榜 -->
+        <div id="mode-a-final-board" style="display: none; text-align: center;">
+          
+          <div id="final-feedback-area" style="margin-bottom: 20px; min-height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <div id="final-feedback-icon" style="font-size: 48px; margin-bottom: 8px; opacity: 0; transform: scale(0.5); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></div>
+            <div id="final-feedback-text" style="font-size: 18px; font-weight: bold; color: var(--color-primary); opacity: 0; transition: opacity 0.3s;"></div>
+          </div>
+
+          <h3 class="modal-results-title" style="margin-bottom: 16px;">最终排名</h3>
+          <div class="modal-results-list" id="final-leaderboard-list">
+            </div>
+
+          <div class="modal-options" style="margin-top: 24px; display: flex; gap: 12px; flex-direction: row;">
+            <button type="button" class="modal-option" id="btn-final-next-round" style="flex: 1; justify-content: center;">
+              <span class="modal-option-text" style="text-align: center; color: var(--color-primary); font-weight: bold;">下一轮</span>
+            </button>
+            <button type="button" class="modal-option" id="btn-final-return-hall" style="flex: 1; justify-content: center;">
+              <span class="modal-option-text" style="text-align: center; color: var(--color-text-sub);">返回大厅</span>
+            </button>
+          </div>
+
+        </div>
 
         <div class="modal-options" id="modal-mode-a-options">
           <button type="button" class="modal-option" data-option="A">
