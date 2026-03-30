@@ -29,6 +29,14 @@ let serverTimeOffset = 0;
 
 const ROOM_PATH = "partyRoom";
 const GAMEMODE_DURATION_SECONDS = { A: 15, B: 15, C: 30 };
+// 修改 localState，加入 globalHistory 容器
+const localState = { 
+  status: "lobby", 
+  players: {}, 
+  gameState: {}, 
+  submissions: {},
+  globalHistory: {} 
+};
 
 const ANIMAL_META = {
   dog: { label: "小狗", emoji: "🐶" },
@@ -42,8 +50,8 @@ const ANIMAL_META = {
 // ============================================================
 
 function getNextFallbackQuestionA() {
-  // 增加 ?. 可选链，确保在组件初始挂载且 gameState 未定义时不会抛出阻塞型异常
-  const usedIndices = localState.gameState?.usedModeAIndices || [];
+  // 从全局独立节点读取历史
+  const usedIndices = localState.globalHistory?.usedModeAIndices || [];
   let availableIndices = [];
 
   for (let i = 0; i < MODE_A_FALLBACK_POOL.length; i++) {
@@ -55,7 +63,6 @@ function getNextFallbackQuestionA() {
   }
 
   const pickedIndex = pickRandom(availableIndices);
-  
   const newUsedIndices = availableIndices.length === MODE_A_FALLBACK_POOL.length
     ? [pickedIndex]
     : [...usedIndices, pickedIndex];
@@ -72,25 +79,33 @@ async function applyModeAFallback(roundId, participantIds) {
     const startedAt = nowMs();
     const endsAt = startedAt + (GAMEMODE_DURATION_SECONDS.A || 15) * 1000;
 
-    await update(roomRootRef(), {
-      "gameState/usedModeAIndices": newUsedIndices,
-      "gameState/round": {
-        ...localState.gameState?.round,
-        id: roundId,
-        subMode: "A",
-        stage: "a_answer",
-        participantIds,
-        question: fallbackData.question,
-        options: fallbackData.options,
-        correct: fallbackData.correct,
-        decode: fallbackData.decode,
-        startedAt,
-        endsAt,
-        autoNextAt: null,
-        revealedAt: null,
-        results: null
-      }
-    });
+    // 构建多路径更新包
+    const multiPathUpdates = {};
+    
+    // 路径一：更新全局历史（绝对路径）
+    multiPathUpdates[`${GLOBAL_HISTORY_PATH}/usedModeAIndices`] = newUsedIndices;
+    
+    // 路径二：更新房间内的游戏状态（绝对路径）
+    multiPathUpdates[`${ROOM_PATH}/gameState/round`] = {
+      ...localState.gameState?.round,
+      id: roundId,
+      subMode: "A",
+      stage: "a_answer",
+      participantIds,
+      question: fallbackData.question,
+      options: fallbackData.options,
+      correct: fallbackData.correct,
+      decode: fallbackData.decode,
+      startedAt,
+      endsAt,
+      autoNextAt: null,
+      revealedAt: null,
+      results: null
+    };
+
+    // 核心改变：向数据库根节点 ref(db) 提交原子更新
+    await update(ref(db), multiPathUpdates);
+
   } catch (error) {
     console.error("错误位置: [applyModeAFallback], 原因:", error);
   }
@@ -1862,6 +1877,10 @@ function attachFirebaseListeners() {
     onValue(submissionsRef(), (snap) => {
       localState.submissions = snap.val() || {};
       maybeRenderGame();
+    });
+
+    onValue(ref(db, GLOBAL_HISTORY_PATH), (snap) => {
+      localState.globalHistory = snap.val() || {};
     });
   } catch (error) {
     console.error("错误位置: [attachFirebaseListeners], 原因:", error);
