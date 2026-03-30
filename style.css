@@ -745,3 +745,104 @@ body {
 #modal-animal-taken .btn-primary:hover {
   background-color: #0097a7 !important; 
 }
+
+/* 🌟 新增：modeA积分榜 */
+/* ============================================================
+   最终排行榜样式 (Mode A Final Leaderboard)
+   ============================================================ */
+
+/* 排行榜单行容器：采用 Flex 布局，左右两端对齐 */
+.final-player-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--color-border-soft);
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal), background var(--transition-fast);
+}
+
+/* 排名数字区 */
+.final-player-rank {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--color-text-sub);
+  width: 32px;
+  text-align: center;
+}
+
+/* 排名第一的数字变色（使用我们定义好的活力橙） */
+.final-player-row.is-winner .final-player-rank {
+  color: var(--color-accent);
+}
+
+/* 玩家信息区（头像与名字） */
+.final-player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  font-weight: 800;
+  color: var(--color-text-main);
+  text-align: left;
+}
+
+/* 分数展示区 */
+.final-player-score {
+  font-weight: 900;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+/* 皇冠图标微调 */
+.crown-icon {
+  margin-left: 6px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* 本人高亮专属样式：稍微放大、加深阴影并使用主色调背景 */
+.final-player-row.is-me {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card);
+  transform: scale(1.03);
+  z-index: 1;
+  position: relative;
+}
+
+/* ============================================================
+   反馈动画 (Feedback Animations)
+   ============================================================ */
+
+/* 胜利者动画：从下往上弹出、稍微放大后回落，最后淡出 */
+@keyframes winnerPop {
+  0% { opacity: 0; transform: scale(0.5) translateY(20px); }
+  20% { opacity: 1; transform: scale(1.2) translateY(-10px); }
+  40% { transform: scale(1) translateY(0); }
+  80% { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.8) translateY(-20px); }
+}
+
+/* 失败者动画：出现时轻微左右晃动（模拟摇头叹气），最后淡出 */
+@keyframes loserShake {
+  0% { opacity: 0; transform: scale(0.5); }
+  20% { opacity: 1; transform: scale(1.1) rotate(5deg); }
+  30% { transform: scale(1.1) rotate(-5deg); }
+  40% { transform: scale(1) rotate(0); }
+  80% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.8) translateY(10px); }
+}
+
+/* 触发动画的专属类名 */
+.animate-winner {
+  animation: winnerPop 2.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-loser {
+  animation: loserShake 2.5s ease-in-out forwards;
+}
+
