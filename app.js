@@ -401,6 +401,13 @@ function bindDom() {
   dom.modeCOptions = document.getElementById("modal-mode-c-options");
   dom.modeCCountdown = document.getElementById("modal-mode-c-countdown");
   dom.modeCCountdownLabel = document.getElementById("modal-mode-c-countdown-label");
+
+  dom.modeAFinalBoard = document.getElementById("mode-a-final-board");
+  dom.finalFeedbackIcon = document.getElementById("final-feedback-icon");
+  dom.finalFeedbackText = document.getElementById("final-feedback-text");
+  dom.finalLeaderboardList = document.getElementById("final-leaderboard-list");
+  dom.btnFinalNextRound = document.getElementById("btn-final-next-round");
+  dom.btnFinalReturnHall = document.getElementById("btn-final-return-hall");
 }
 
 function openModal(el) {
@@ -635,6 +642,10 @@ function renderModeA(round) {
     dom.modeAResults.style.display = "none";
     dom.modeAWaiting.style.display = "none";
     dom.modeAOptions.style.display = "none";
+    
+    // 1. 新增：每次刷新时，默认隐藏最终排行榜容器
+    if (dom.modeAFinalBoard) dom.modeAFinalBoard.style.display = "none";
+
     dom.modeADecode.textContent = round.decode || "";
     dom.modeAQuestion.textContent = round.question || "等待生成题目……";
 
@@ -662,11 +673,25 @@ function renderModeA(round) {
       renderModeAResults(round);
       return renderCountdown(round);
     }
+
+    // 2. 新增：处理最终结算排行榜阶段
+    if (stage === "a_final_leaderboard") {
+      dom.modeAQuestion.textContent = "游戏结束！";
+      if (dom.modeAFinalBoard) dom.modeAFinalBoard.style.display = "block";
+      
+      // 隐藏倒计时组件
+      if (dom.modeACountdown) dom.modeACountdown.style.display = "none";
+      if (dom.modeACountdownLabel) dom.modeACountdownLabel.style.display = "none";
+      
+      // 调用负责渲染排行榜的专属函数
+      renderModeAFinalLeaderboard(round);
+      return;
+    }
+
   } catch (error) {
     console.error("错误位置: [renderModeA], 原因:", error);
   }
 }
-
 function renderModeAResults(round) {
   try {
     const participants = round.participantIds || [];
@@ -694,6 +719,84 @@ function renderModeAResults(round) {
     });
   } catch (error) {
     console.error("错误位置: [renderModeAResults], 原因:", error);
+  }
+}
+
+function renderModeAFinalLeaderboard(round) {
+  try {
+    const participants = round.participantIds || [];
+    const session = localState.gameState?.session || { scores: {} };
+    const scores = session.scores || {};
+
+    // 1. 数据转换为数组并按分数降序排列
+    const scoreboard = participants.map(playerId => {
+      return {
+        id: playerId,
+        score: scores[playerId] || 0,
+        meta: ANIMAL_META[localState.players[playerId]?.animalKey] || { label: playerId, emoji: "❓" }
+      };
+    }).sort((a, b) => b.score - a.score);
+
+    // 2. 渲染排行榜列表 HTML
+    if (dom.finalLeaderboardList) {
+      dom.finalLeaderboardList.innerHTML = scoreboard.map((player, index) => {
+        const rank = index + 1;
+        const isWinner = index === 0; // 数组第一位就是第一名
+        const isMe = player.id === myPlayerId;
+        
+        // 动态拼接 CSS 类名以触发高亮
+        let rowClasses = "final-player-row";
+        if (isWinner) rowClasses += " is-winner";
+        if (isMe) rowClasses += " is-me";
+
+        // 如果是第一名，追加皇冠 HTML
+        const crownHtml = isWinner ? `<span class="crown-icon" aria-hidden="true">👑</span>` : "";
+
+        return `
+          <div class="${rowClasses}">
+            <div class="final-player-rank">#${rank}</div>
+            <div class="final-player-info">
+              <span aria-hidden="true">${player.meta.emoji}</span>
+              <span>${player.meta.label}</span>
+              ${crownHtml}
+            </div>
+            <div class="final-player-score">答对 ${player.score} 题</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // 3. 处理当前玩家的动画反馈
+    // 判定自己是否是第一名（需考虑零分并列倒数第一的情况）
+    const highestScore = scoreboard[0]?.score || 0;
+    const myScore = scores[myPlayerId] || 0;
+    const amIWinner = myScore === highestScore && highestScore > 0; 
+
+    if (dom.finalFeedbackIcon && dom.finalFeedbackText) {
+      // 清除旧类名并强制重绘，以确保重复进入时动画能重新触发
+      dom.finalFeedbackIcon.className = "";
+      void dom.finalFeedbackIcon.offsetWidth; 
+
+      if (amIWinner) {
+        dom.finalFeedbackIcon.textContent = pickRandom(["😎", "🏆", "🎉"]);
+        dom.finalFeedbackText.textContent = pickRandom(["你，了不起！", "知识的巅峰！", "绝顶聪明！"]);
+        dom.finalFeedbackIcon.classList.add("animate-winner");
+      } else {
+        dom.finalFeedbackIcon.textContent = pickRandom(["😭", "🥲", "🫠"]);
+        dom.finalFeedbackText.textContent = pickRandom(["就差一点点！", "再接再厉！", "下次一定赢！"]);
+        dom.finalFeedbackIcon.classList.add("animate-loser");
+      }
+      
+      dom.finalFeedbackText.style.opacity = "1";
+      
+      // 定时器：2.5秒后动画结束，让文案也随之淡出
+      setTimeout(() => {
+        if (dom.finalFeedbackText) dom.finalFeedbackText.style.opacity = "0";
+      }, 2500);
+    }
+
+  } catch (error) {
+    console.error("错误位置: [renderModeAFinalLeaderboard], 原因:", error);
   }
 }
 
@@ -1846,6 +1949,17 @@ function bindDomEvents() {
     });
   } catch (error) {
     console.error("错误位置: [bind modeC options], 原因:", error);
+  }
+  
+  try {
+    dom.btnFinalNextRound?.addEventListener("click", () => {
+      requestStartParty("A").catch(e => console.error("错误位置: [下一轮], 原因:", e));
+   });
+    dom.btnFinalReturnHall?.addEventListener("click", () => {
+      requestReturnHall().catch(e => console.error("错误位置: [返回大厅], 原因:", e));
+    });
+  } catch (error) {
+    console.error("错误位置: [bind final buttons], 原因:", error);
   }
 }
 
