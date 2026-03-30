@@ -818,23 +818,21 @@ body {
    反馈动画 (Feedback Animations)
    ============================================================ */
 
-/* 胜利者动画：从下往上弹出、稍微放大后回落，最后淡出 */
+/* 胜利者动画：从下往上弹出、稍微放大后回落 */
 @keyframes winnerPop {
   0% { opacity: 0; transform: scale(0.5) translateY(20px); }
   20% { opacity: 1; transform: scale(1.2) translateY(-10px); }
   40% { transform: scale(1) translateY(0); }
-  80% { opacity: 1; transform: scale(1) translateY(0); }
-  100% { opacity: 0; transform: scale(0.8) translateY(-20px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); } 
 }
 
-/* 失败者动画：出现时轻微左右晃动（模拟摇头叹气），最后淡出 */
+/* 失败者动画：修改末尾的 opacity 为 1，使其永久停留 */
 @keyframes loserShake {
   0% { opacity: 0; transform: scale(0.5); }
   20% { opacity: 1; transform: scale(1.1) rotate(5deg); }
   30% { transform: scale(1.1) rotate(-5deg); }
   40% { transform: scale(1) rotate(0); }
-  80% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.8) translateY(10px); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* 触发动画的专属类名 */
