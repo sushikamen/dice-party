@@ -645,7 +645,8 @@ function renderModeA(round) {
     
     // 1. 新增：每次刷新时，默认隐藏最终排行榜容器
     if (dom.modeAFinalBoard) dom.modeAFinalBoard.style.display = "none";
-
+    if (dom.modeACountdown) dom.modeACountdown.style.display = "block";
+    if (dom.modeACountdownLabel) dom.modeACountdownLabel.style.display = "block";
     dom.modeADecode.textContent = round.decode || "";
     dom.modeAQuestion.textContent = round.question || "等待生成题目……";
 
@@ -728,20 +729,41 @@ function renderModeAFinalLeaderboard(round) {
     const session = localState.gameState?.session || { scores: {} };
     const scores = session.scores || {};
 
-    // 1. 数据转换为数组并按分数降序排列
+    // 1. 数据转换为数组，并引入多条件自定义排序
     const scoreboard = participants.map(playerId => {
       return {
         id: playerId,
         score: scores[playerId] || 0,
         meta: ANIMAL_META[localState.players[playerId]?.animalKey] || { label: playerId, emoji: "❓" }
       };
-    }).sort((a, b) => b.score - a.score);
+    }).sort((a, b) => {
+      // 首要条件：按分数降序排列
+      if (b.score !== a.score) {
+        return b.score - a.score; 
+      }
+      // 次要条件：分数相同时，把当前玩家自己排在前面
+      if (a.id === myPlayerId) return -1;
+      if (b.id === myPlayerId) return 1;
+      return 0;
+    });
 
-    // 2. 渲染排行榜列表 HTML
+    // 2. 预处理标准竞争排名 (例如：1, 1, 3, 4)
+    let previousScore = null;
+    let currentRank = 1;
+    scoreboard.forEach((player, index) => {
+      if (player.score !== previousScore) {
+        // 如果分数发生变化，名次直接跃升到当前的物理索引 + 1
+        currentRank = index + 1;
+      }
+      player.rank = currentRank;
+      previousScore = player.score;
+    });
+
+    // 3. 渲染排行榜列表 HTML
     if (dom.finalLeaderboardList) {
-      dom.finalLeaderboardList.innerHTML = scoreboard.map((player, index) => {
-        const rank = index + 1;
-        const isWinner = index === 0; // 数组第一位就是第一名
+      dom.finalLeaderboardList.innerHTML = scoreboard.map(player => {
+        const rank = player.rank;
+        const isWinner = rank === 1; // 只要名次计算出是 1，就享有第一名的视觉待遇
         const isMe = player.id === myPlayerId;
         
         // 动态拼接 CSS 类名以触发高亮
@@ -766,33 +788,26 @@ function renderModeAFinalLeaderboard(round) {
       }).join("");
     }
 
-    // 3. 处理当前玩家的动画反馈
-    // 判定自己是否是第一名（需考虑零分并列倒数第一的情况）
-    const highestScore = scoreboard[0]?.score || 0;
-    const myScore = scores[myPlayerId] || 0;
-    const amIWinner = myScore === highestScore && highestScore > 0; 
+    // 4. 处理当前玩家的动画反馈
+    // 逻辑简化：直接根据预处理好的 rank 属性来判断自己是否为第一名
+    const myPlayerData = scoreboard.find(p => p.id === myPlayerId);
+    const amIWinner = myPlayerData && myPlayerData.rank === 1 && myPlayerData.score > 0;
 
     if (dom.finalFeedbackIcon && dom.finalFeedbackText) {
-      // 清除旧类名并强制重绘，以确保重复进入时动画能重新触发
       dom.finalFeedbackIcon.className = "";
       void dom.finalFeedbackIcon.offsetWidth; 
 
       if (amIWinner) {
         dom.finalFeedbackIcon.textContent = pickRandom(["😎", "🏆", "🎉"]);
-        dom.finalFeedbackText.textContent = pickRandom(["你，了不起！", "知识的巅峰！", "绝顶聪明！"]);
+        dom.finalFeedbackText.textContent = pickRandom(["你，了不起！", "解锁称号：聪明小拉", "大脑是最好的肝脏捍卫者"]);
         dom.finalFeedbackIcon.classList.add("animate-winner");
       } else {
         dom.finalFeedbackIcon.textContent = pickRandom(["😭", "🥲", "🫠"]);
-        dom.finalFeedbackText.textContent = pickRandom(["就差一点点！", "再接再厉！", "下次一定赢！"]);
+        dom.finalFeedbackText.textContent = pickRandom(["喝一杯吧，又能怎！", "是为了酒精装傻对吗", "死了啦，都是特朗普害的啦"]);
         dom.finalFeedbackIcon.classList.add("animate-loser");
       }
       
       dom.finalFeedbackText.style.opacity = "1";
-      
-      // 定时器：2.5秒后动画结束，让文案也随之淡出
-      setTimeout(() => {
-        if (dom.finalFeedbackText) dom.finalFeedbackText.style.opacity = "0";
-      }, 2500);
     }
 
   } catch (error) {
