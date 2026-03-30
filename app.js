@@ -1065,7 +1065,6 @@ async function gameLoopTick() {
 }
 
 // 初始化游戏状态引擎
-
 async function requestStartParty(selectedMode) {
   if (!selectedMode || !db) return;
   
@@ -1076,13 +1075,26 @@ async function requestStartParty(selectedMode) {
     const roundId = makeRoundId();
     const subMode = selectedMode === "D" ? pickRandom(["A", "B", "C"]) : selectedMode;
 
-    // 注意：这里使用了 / 符号而非 . 符号，这是 Firebase update 的正确路径语法
+    // 1. 新增：初始化玩家得分容器
+    const initialScores = {};
+    if (subMode === "A") {
+      participantIds.forEach(playerId => {
+        initialScores[playerId] = 0;
+      });
+    }
+
+    // 2. 将数据合并写入 Firebase
     await update(roomRootRef(), {
       "status": "playing",
       "submissions": null, 
       "locks": null,
       "gameState/mode": selectedMode,
       "gameState/pause": { active: false },
+      // 3. 新增：写入 session 状态（仅模式 A 启用）
+      "gameState/session": subMode === "A" ? {
+        questionCount: 1,
+        scores: initialScores
+      } : null,
       "gameState/round": {
         id: roundId,
         subMode: subMode,
@@ -1096,6 +1108,7 @@ async function requestStartParty(selectedMode) {
     console.error("引擎初始化失败:", error);
   }
 }
+
 // 调度当前回合的生成模型
 async function hostGenerateQuestionForRound(round) {
   const subMode = round.subMode;
@@ -1118,6 +1131,32 @@ async function hostGenerateNextRoundAndQuestion(round) {
   const currentMode = localState.gameState.mode;
   const participantIds = Array.isArray(round.participantIds) && round.participantIds.length ? round.participantIds : Object.keys(localState.players || {});
   if (!participantIds.length) return;
+
+  // ====== 核心拦截逻辑开始 ======
+  // 判断当前回合是否是模式 A
+  if (round.subMode === "A") {
+    // 获取当前的进度数据
+    const currentSession = localState.gameState?.session || { questionCount: 1, scores: {} };
+    const currentCount = currentSession.questionCount || 1;
+
+    // 如果已经完成 5 题
+    if (currentCount >= 5) {
+      await clearSubmissions();
+      // 停止生成新题目，强制将状态切换为最终排行榜
+      await update(roomRootRef(), {
+        "gameState/round/stage": "a_final_leaderboard",
+        "gameState/round/endsAt": null,
+        "gameState/round/autoNextAt": null
+      });
+      return; // 物理阻断，退出函数，后面的生成逻辑全都不执行了
+    } else {
+      // 如果还没到 5 题，题号 + 1
+      await update(roomRootRef(), {
+        "gameState/session/questionCount": currentCount + 1
+      });
+    }
+  }
+  // ====== 核心拦截逻辑结束 ======
 
   const nextSubMode = currentMode === "D" ? pickRandom(["A", "B", "C"]) : currentMode;
   const newRoundId = makeRoundId();
@@ -1557,25 +1596,39 @@ async function applyModeCFallback(roundId, participantIds) {
   }
 }
 
-// ============================================================
-// Reveal（host 写回 gameState）
+
 // ============================================================
 // Reveal（host 写回 gameState）
 async function revealModeA(round, submissionsForRound) {
   try {
     const participantIds = round.participantIds || [];
     const results = {};
+    
+    // 1. 调取当前的计分板
+    const currentSession = localState.gameState?.session || { questionCount: 1, scores: {} };
+    const newScores = { ...currentSession.scores };
+
     participantIds.forEach((playerId) => {
       const sub = submissionsForRound[playerId] || {};
       const optionKey = sub.optionKey || null;
-      // 🚨 只有当 optionKey 存在且等于正确答案时才是 true，其他情况全是 false
       const isCorrect = (optionKey && round.correct) ? (optionKey === round.correct) : false;
       results[playerId] = { optionKey, isCorrect };
+
+      // 2. 如果答对，分数加 1
+      if (isCorrect) {
+        newScores[playerId] = (newScores[playerId] || 0) + 1;
+      }
     });
+
     const revealedAt = nowMs();
-    await update(roomRootRef(), { 
-      "gameState/round": { ...round, stage: "a_revealed", results, revealedAt, autoNextAt: revealedAt + 7000 } 
-    });
+    
+    // 3. 准备向数据库发送的更新包
+    const patchData = { 
+      "gameState/round": { ...round, stage: "a_revealed", results, revealedAt, autoNextAt: revealedAt + 7000 },
+      "gameState/session/scores": newScores 
+    };
+
+    await update(roomRootRef(), patchData);
   } catch (error) {
     console.error("错误位置: [revealModeA], 原因:", error);
   }
