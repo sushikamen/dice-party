@@ -1236,24 +1236,34 @@ async function hostGenerateNextRoundAndQuestion(round) {
   if (!participantIds.length) return;
 
   // ====== 核心拦截逻辑开始 ======
-  // 判断当前回合是否是模式 A
   if (round.subMode === "A") {
-    // 获取当前的进度数据
     const currentSession = localState.gameState?.session || { questionCount: 1, scores: {} };
     const currentCount = currentSession.questionCount || 1;
 
     // 如果已经完成 5 题
     if (currentCount >= 5) {
+      console.log("【系统日志】触发第5题拦截，准备进入最终排行榜！");
       await clearSubmissions();
-      // 停止生成新题目，强制将状态切换为最终排行榜
+      
+      // 核心修复：不要只改 stage，必须彻底覆写整个 round 对象，抹除上一题的残影
       await update(roomRootRef(), {
-        "gameState/round/stage": "a_final_leaderboard",
-        "gameState/round/endsAt": null,
-        "gameState/round/autoNextAt": null
+        "gameState/round": {
+          id: round.id,
+          subMode: "A",
+          stage: "a_final_leaderboard",
+          participantIds: participantIds,
+          question: "游戏结束！结算中...", // 强制覆盖旧题目
+          options: null,               // 强制清空选项
+          correct: null,
+          decode: null,
+          results: null,
+          endsAt: null,
+          autoNextAt: null
+        }
       });
-      return; // 物理阻断，退出函数，后面的生成逻辑全都不执行了
+      return; // 物理阻断，退出函数
     } else {
-      // 如果还没到 5 题，题号 + 1
+      // 还没到 5 题，题号 + 1
       await update(roomRootRef(), {
         "gameState/session/questionCount": currentCount + 1
       });
