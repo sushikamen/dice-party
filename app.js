@@ -204,7 +204,8 @@ function getNextFallbackQuestionB() {
 // ============================================================
 
 function getNextFallbackMissionC() {
-  const usedIndices = localState.gameState?.usedModeCIndices || [];
+  // 🌟 核心修改：从全局独立历史节点 (globalHistory) 读取记录，确保绝对去重
+  const usedIndices = localState.globalHistory?.usedModeCIndices || [];
   let availableIndices = [];
 
   for (let i = 0; i < MODE_C_FALLBACK_POOL.length; i++) {
@@ -228,11 +229,7 @@ function getNextFallbackMissionC() {
   };
 }
 
-// （此处应当承接完整的 applyModeCFallback 和 generateModeCQuestion 函数）
 
-const SYSTEM_PROMPT = `Role: Fun party host. Target: Close friends (female/queer). Constraints: NO romance, men, sex, or gross topics. Output strictly valid JSON. Language: Simplified Chinese.`;
-const localState = { status: "lobby", players: {}, gameState: {}, submissions: {} };
-const myPlayerId = getOrCreateMyPlayerId();
 
 function getOrCreateMyPlayerId() {
   try {
