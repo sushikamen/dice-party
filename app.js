@@ -11,12 +11,17 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
 import { GoogleGenerativeAI } from "https://unpkg.com/@google/generative-ai/dist/index.mjs";
 
-// 🌟 新增：从独立文件引入三大题库
 import { 
   MODE_A_FALLBACK_POOL, 
   MODE_B_FALLBACK_POOL, 
   MODE_C_FALLBACK_POOL 
 } from "./questions.js";
+
+// 🌟 核心魔法：全自动为所有题目注入基于文本的永久唯一 ID！
+const PROCESSED_MODE_A_POOL = MODE_A_FALLBACK_POOL.map(item => ({
+  ...item,
+  id: generateStableId(item.question) // 用题目文字生成永久 ID
+}));
 
 console.log("app.js loaded");
 
@@ -51,28 +56,28 @@ const ANIMAL_META = {
 // ============================================================
 // 题库抽取与生成逻辑：Mode A (百科冷知识)
 // ============================================================
-
 function getNextFallbackQuestionA() {
-  // 从全局独立节点读取历史
-  const usedIndices = localState.globalHistory?.usedModeAIndices || [];
-  let availableIndices = [];
+  const usedIds = localState.globalHistory?.usedModeAIds || [];
+  
+  // 🌟 注意这里：改用 PROCESSED_MODE_A_POOL
+  let availableQuestions = PROCESSED_MODE_A_POOL.filter(q => !usedIds.includes(q.id));
 
-  for (let i = 0; i < MODE_A_FALLBACK_POOL.length; i++) {
-    if (!usedIndices.includes(i)) availableIndices.push(i);
+  // 如果全都出过了，触发触底反弹，清空记忆重新来
+  if (availableQuestions.length === 0) {
+    availableQuestions = PROCESSED_MODE_A_POOL; // 🌟 注意这里
   }
 
-  if (availableIndices.length === 0) {
-    availableIndices = MODE_A_FALLBACK_POOL.map((_, i) => i);
-  }
-
-  const pickedIndex = pickRandom(availableIndices);
-  const newUsedIndices = availableIndices.length === MODE_A_FALLBACK_POOL.length
-    ? [pickedIndex]
-    : [...usedIndices, pickedIndex];
+  // 随机抽取一题
+  const pickedQuestion = pickRandom(availableQuestions);
+  
+  // 更新已出题的 ID 列表
+  const newUsedIds = availableQuestions.length === PROCESSED_MODE_A_POOL.length
+    ? [pickedQuestion.id] 
+    : [...usedIds, pickedQuestion.id]; 
 
   return {
-    fallbackData: MODE_A_FALLBACK_POOL[pickedIndex],
-    newUsedIndices: newUsedIndices
+    fallbackData: pickedQuestion,
+    newUsedIndices: newUsedIds 
   };
 }
 
@@ -346,6 +351,18 @@ function pickRandom(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+// 🌟 自动 ID 生成器：把任意字符串变成固定且唯一的简短乱码
+function generateStableId(text) {
+  let hash = 0;
+  if (text.length === 0) return "q_0";
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // 转化为 32 位整数
+  }
+  // 加上 "q_" 前缀，并将数字转化为 36 进制的极短乱码（例如 "q_1a2b3c"）
+  return "q_" + Math.abs(hash).toString(36);
+}
 
 function isPauseActive() {
   return !!localState.gameState?.pause?.active;
@@ -2058,3 +2075,19 @@ async function main() {
 document.addEventListener("DOMContentLoaded", () => {
   main().catch((error) => console.error("错误位置: [DOMContentLoaded main], 原因:", error));
 });
+
+// 题目历史清空，只要按 F12 打开浏览器开发者工具的 Console（控制台），输入 adminResetHistory() 并回车。历史瞬间清零
+window.adminResetHistory = async function() {
+  if (!db) return console.error("数据库未连接");
+  try {
+    // 将 Mode A, B, C 的历史记录全部物理清空 (设为 null)
+    await update(ref(db), {
+      [`${GLOBAL_HISTORY_PATH}/usedModeAIds`]: null,
+      [`${GLOBAL_HISTORY_PATH}/usedModeBIndices`]: null, 
+      [`${GLOBAL_HISTORY_PATH}/usedModeCIndices`]: null
+    });
+    console.log("✅ 所有题库历史已成功清空！全部题目已重置回池子！");
+  } catch (error) {
+    console.error("清空失败:", error);
+  }
+};
