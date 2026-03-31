@@ -28,6 +28,9 @@ let geminiModel = null;
 let serverTimeOffset = 0;
 
 const ROOM_PATH = "partyRoom";
+const GLOBAL_HISTORY_PATH = "globalHistory"; 
+const myPlayerId = getOrCreateMyPlayerId(); 
+const SYSTEM_PROMPT = ""; 
 const GAMEMODE_DURATION_SECONDS = { A: 15, B: 15, C: 30 };
 // 修改 localState，加入 globalHistory 容器
 const localState = { 
